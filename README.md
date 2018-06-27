@@ -16,6 +16,7 @@ Let's take your sample q_gadget structure:
          Q_DECLARE_METATYPE(Ur)
  ```
 There is 1 simple step to make it work
+
 0) Create ORM object and use it
 ```Qt
          ORM orm;
