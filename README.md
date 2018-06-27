@@ -133,7 +133,7 @@ ORM_DECLARE_METATYPE(Ur)
 ```
 4) Done! Now go back to step 0 and take another coockie. You totally deserve it!
 
-   FAQ:
+###FAQ:
 Q.: Is it free? What's the license?
 A.: It's as free as love.
     But speaking in terms of law, let's say, MIT. You can also use it with any (l)GPL. Is it OK?
