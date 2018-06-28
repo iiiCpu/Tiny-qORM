@@ -105,40 +105,57 @@ You sick freak... I'm in, let's do it!
 You can either add `long long orm_rowid` property or inherit the `ORMValue` structure.
 Actually, it is better to add ROWIDs into every structure, but 
 ```C++
-struct Dad
-{
-    Q_GADGET
-    Q_PROPERTY(long long orm_rowid MEMBER m_own_rowid)              // <<<
-    Q_PROPERTY(QString name MEMBER m_name)
-    Q_PROPERTY(Car * car MEMBER m_car)
-public:
-    long long m_own_rowid;                                          // <<<
-    QString m_name;
-    Car * m_car = nullptr; // lost somewhere
-    bool operator !=(Dad const& no) { return m_name != no.m_name; }
-};
-    //        VVVVVVVVVVVVVVVVV
-    struct Ur : public ORMValue // ...                              // <<<
+    struct Dad
+    {
+        Q_GADGET
+        Q_PROPERTY(long long orm_rowid MEMBER m_own_rowid)              // <<<
+        Q_PROPERTY(QString name MEMBER m_name)
+        Q_PROPERTY(Car * car MEMBER m_car)
+    public:
+        long long m_own_rowid;                                          // <<<
+        QString m_name;
+        Car * m_car = nullptr; // lost somewhere
+        bool operator !=(Dad const& no) { return m_name != no.m_name; }
+    };
+        //        VVVVVVVVVVVVVVVVV
+        struct Ur : public ORMValue // ...                              // <<<
 ```
 2) Replace `Q_DECLARE_METATYPE` with `ORM_DECLARE_METATYPE`. `ORM_DECLARE_METATYPE` is actually `Q_DECLARE_METATYPE` inside, but it also generates metadata for pointers and containers.
 ```C++
-ORM_DECLARE_METATYPE(Mom)
-ORM_DECLARE_METATYPE(Car)
-ORM_DECLARE_METATYPE(Dad)
-ORM_DECLARE_METATYPE(Brother)
-ORM_DECLARE_METATYPE(Ur)
+        ORM_DECLARE_METATYPE(Mom)
+        ORM_DECLARE_METATYPE(Car)
+        ORM_DECLARE_METATYPE(Dad)
+        ORM_DECLARE_METATYPE(Brother)
+        ORM_DECLARE_METATYPE(Ur)
 ```
 3) Finally replace `qRegisterMetaType` with `registerTypeORM`.
 ```C++
-    registerTypeORM<Ur>("Ur");
-    registerTypeORM<Dad>("Dad");
-    registerTypeORM<Mom>("Mom");
-    registerTypeORM<Brother>("Brother");
-    registerTypeORM<Car>("Car");
+        registerTypeORM<Ur>("Ur");
+        registerTypeORM<Dad>("Dad");
+        registerTypeORM<Mom>("Mom");
+        registerTypeORM<Brother>("Brother");
+        registerTypeORM<Car>("Car");
 ```
 4) Done! Now go back to step 0 and take another coockie. You totally deserve it!
 
 5) Now you might want to improve it a little. Like prevent `Brother::last_combo` property from being saved. Easy. You can hide property from ORM by declaring them `STORABLE false`. ORM does not load data if property is not storable or writable. 
+
+OK, that was `Q_GADGET`, but what about `QObject`? Easy. 
+
+1) Register QObject with `registerQObjectORM`.
+```C++
+        registerQObjectORM<QObject>("QObject");
+```
+2) Pass pointer types instead of the type itself.
+```C++
+        ORM orm;
+        orm.create<QObject*>();
+        QList<QObject*> stff = orm.select<QObject*>();
+        orm.insert(stff);
+```
+3) Don't forget: `ORM` **DO NOT** make parent-child relations for your classes. 
+
+That's all for now.
 
 ## FAQ:
 * Q.: Is it free? What's the license?
