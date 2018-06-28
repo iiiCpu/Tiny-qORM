@@ -103,7 +103,7 @@ You sick freak... I'm in, let's do it!
 
 1) If your structure have other structures as fields, (smart) pointers or container of structures, you have to add ROWID to your structure.
 You can either add `long long orm_rowid` property or inherit the `ORMValue` structure.
-Actually, it is better to add ROWIDs into every structure, but 
+Actually, it is better to add ROWIDs into every structure. Still it's not necessary, so  it all up to you.
 ```C++
     struct Dad
     {
@@ -120,7 +120,7 @@ Actually, it is better to add ROWIDs into every structure, but
         //        VVVVVVVVVVVVVVVVV
         struct Ur : public ORMValue // ...                              // <<<
 ```
-2) Replace `Q_DECLARE_METATYPE` with `ORM_DECLARE_METATYPE`. `ORM_DECLARE_METATYPE` is actually `Q_DECLARE_METATYPE` inside, but it also generates metadata for pointers and containers.
+2) Replace `Q_DECLARE_METATYPE` with `ORM_DECLARE_METATYPE`. `ORM_DECLARE_METATYPE` is `Q_DECLARE_METATYPE` inside, but it also generates metadata for pointers and containers.
 ```C++
         ORM_DECLARE_METATYPE(Mom)
         ORM_DECLARE_METATYPE(Car)
@@ -138,7 +138,7 @@ Actually, it is better to add ROWIDs into every structure, but
 ```
 4) Done! Now go back to step 0 and take another coockie. You totally deserve it!
 
-5) Now you might want to improve it a little. Like prevent `Brother::last_combo` property from being saved. Easy. You can hide property from ORM by declaring them `STORABLE false`. ORM does not load data if property is not storable or writable. 
+5) Now you might want to improve it a little. Like prevent `Brother::last_combo` property from being saved. Easy. You can hide property from ORM by declaring them `STORABLE false`. ORM does not load data if property is not storable or writable, and also don't save unreadable ones. 
 
 OK, that was `Q_GADGET`, but what about `QObject`? Easy. 
 
@@ -153,7 +153,9 @@ OK, that was `Q_GADGET`, but what about `QObject`? Easy.
         QList<QObject*> stff = orm.select<QObject*>();
         orm.insert(stff);
 ```
-3) Don't forget: `ORM` **DO NOT** make parent-child relations for your classes. 
+3) Another coockie!
+
+4) Don't forget: `ORM` **DO NOT** make parent-child relations for your classes, so you have to either create them by yourself or delete your classes in destructor.
 
 That's all for now.
 
@@ -164,12 +166,13 @@ That's all for now.
 
 * Q.: What types are supported by your ORM?
 * A.: 
-  *  `+`  Any primitive type. At least I hope so.
-  *  `+`  Any registered `Q_ENUM`/`Q_GADGET`/`Q_OBJECT`, `QList`\`QVector` of registered types, (smart)pointers to gadgets.
-  *  `+`  Any type with valid `T`->`QVariant`->`T` conversion. Add it to primitive type list with `ORM::addPrimitiveType`
-  * `+`/`-` std containers are not supported but easy to add, goto `orm_containers` namespace.
-  *  `-`  Static arrays and pointers to arrays will be never supported.
-  *  `-`  Associative containers and pairs are not supported. It is possible to add all necessary checkups, but I can't figure out how to turn it into table\value.
+  * ` + `  Any primitive type. At least I hope so.
+  * ` + `  Any registered `Q_ENUM`/`Q_GADGET`/`Q_OBJECT`, `QList`\`QVector` of registered types, (smart)pointers to gadgets.
+  * ` + `  Any type with valid `T`->`QVariant`->`T` conversion. Add it to primitive type list with `ORM::addPrimitiveType`
+  * `+/-` std containers are not supported but easy to add, goto `orm_containers` namespace.
+  * ` -`  Static arrays and pointers to arrays will be never supported.
+  * ` -`  QObject fields. One does not simple to pass pointer to field through QVariant metahell. And copy constructors are forbiden for QObjects.
+  * ` -`  Associative containers and pairs are not supported. It is possible to add all necessary checkups, but I can't figure out how to turn them into table\value.
   *  `-`  Classes without Qt meta are not supported. Obviously.
 
 
