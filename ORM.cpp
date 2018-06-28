@@ -13,9 +13,17 @@
 #include <QRegularExpression>
 
 
+
+static QMap<int, orm_qobjects::creators> objectMap;
 static QMap<int, orm_pointers::ORMPointerStub> pointerMap;
 static QSet<int> primitiveContainers;
 static bool orm_once = true;
+
+void orm_qobjects::addQObjectStub(int type, orm_qobjects::creators stub)
+{
+    if (!type) qWarning() << "registerQObject: Could not register type";
+    if (type) objectMap[type] = stub;
+}
 
 void ORM::addPointerStub(const orm_pointers::ORMPointerStub & stub)
 {
@@ -212,12 +220,13 @@ QString ORM::TYPE(int type_id) const {
 void ORM::meta_create(const QMetaObject &meta, QString const& parent_name)
 {
     QString myName = parent_name + normalize(QString(meta.className()));
+    int classtype = QMetaType::type(meta.className());
     QString query_text = QString("CREATE TABLE IF NOT EXISTS %1 (").arg(myName);
     QStringList query_columns;
     bool with_orm_rowid = withRowid(meta);
     for (int i = 0; i < meta.propertyCount(); ++i) {
         QMetaProperty p = meta.property(i);
-        if (!p.isStored()) {
+        if (!p.isStored() || !p.isWritable()) {
             continue;
         }
         if (isPrimitive(p.userType())) {
@@ -291,6 +300,7 @@ QVariant ORM::meta_select(const QMetaObject &meta, QString const& parent_name, Q
 {
     QString myName = parent_name + normalize(QString(meta.className()));
     int classtype = QMetaType::type(meta.className());
+    bool isQObject = meta.inherits(QMetaType::metaObjectForType(QMetaType::QObjectStar));
     QStringList query_columns;
     bool with_orm_rowid = withRowid(meta);
     QString query_text = "SELECT property_name, parent_orm_rowid, ";
@@ -328,7 +338,25 @@ QVariant ORM::meta_select(const QMetaObject &meta, QString const& parent_name, Q
     }
     QVariantList list;
     while (query.next()) {
-        QVariant v(classtype, nullptr);
+        QVariant v;
+        if (isQObject) {
+            if (!objectMap.contains(classtype)) {
+                qWarning() << "select: " << meta.className() << " is not registered. Call registerQObjectORM<" << meta.className() << ">(); first";
+                break;
+            }
+            v = QVariant::fromValue(objectMap[classtype]());
+        }
+        else {
+            v = QVariant((classtype), nullptr);
+        }
+        if (!v.isValid()){
+            qWarning() << "select: Unable to create instance of type " << meta.className();
+            break;
+        }
+        if (isQObject && v.value<QObject*>() == nullptr) {
+            qWarning() << "select: Unable to create instance of QObject " << meta.className();
+            break;
+        }
         long long orm_rowid = 0;
         if (with_orm_rowid) {
             orm_rowid = query.value("orm_rowid").toLongLong();
@@ -345,7 +373,12 @@ QVariant ORM::meta_select(const QMetaObject &meta, QString const& parent_name, Q
                         if (o) {
                             QVariantList vl = meta_select(*o, myName, QString(p.name()), orm_rowid).toList();
                             if (vl.size()) {
-                                meta.property(i).writeOnGadget(v.value<void*>(), vl.first());
+                                if (isQObject) {
+                                    meta.property(i).write(v.value<QObject*>(), vl.first());
+                                }
+                                else {
+                                    meta.property(i).writeOnGadget(v.value<void*>(), vl.first());
+                                }
                             }
                             continue;
                         }
@@ -359,7 +392,12 @@ QVariant ORM::meta_select(const QMetaObject &meta, QString const& parent_name, Q
                             QVariantList vl = meta_select(*o, myName, QString(p.name()), orm_rowid).toList();
                             if (vl.size()) {
                                 if (vl.first().value<void*>()) {
-                                    meta.property(i).writeOnGadget(v.value<void*>(), vl.first());
+                                    if (isQObject) {
+                                        meta.property(i).write(v.value<QObject*>(), vl.first());
+                                    }
+                                    else {
+                                        meta.property(i).writeOnGadget(v.value<void*>(), vl.first());
+                                    }
                                 }
                             }
                             continue;
@@ -369,7 +407,12 @@ QVariant ORM::meta_select(const QMetaObject &meta, QString const& parent_name, Q
                         const QMetaObject * o = QMetaType::metaObjectForType(getSequentialContainerStoredType(p.userType()));
                         if (o) {
                             QVariant qv = meta_select(*o, myName, QString(p.name()), orm_rowid);
-                            meta.property(i).writeOnGadget(v.value<void*>(), qv.toList());
+                            if (isQObject) {
+                                meta.property(i).write(v.value<QObject*>(), qv.toList());
+                            }
+                            else {
+                                meta.property(i).writeOnGadget(v.value<void*>(), qv.toList());
+                            }
                             continue;
                         }
                     }
@@ -377,20 +420,40 @@ QVariant ORM::meta_select(const QMetaObject &meta, QString const& parent_name, Q
                         const QMetaObject * o = QMetaType::metaObjectForType(getAssociativeContainerStoredValueType(p.userType()));
                         if (o) {
                             QVariant qv = meta_select(*o, myName, QString(p.name()), orm_rowid);
-                            meta.property(i).writeOnGadget(v.value<void*>(), qv);
+                            if (isQObject) {
+                                meta.property(i).write(v.value<QObject*>(), qv);
+                            }
+                            else {
+                                meta.property(i).writeOnGadget(v.value<void*>(), qv);
+                            }
                             continue;
                         }
                     }
                 }
 
                 if (QString(p.name()) == "orm_rowid") {
-                    meta.property(i).writeOnGadget(v.value<void*>(), query.value(p.name()));
+                    if (isQObject) {
+                        meta.property(i).write(v.value<QObject*>(), query.value(p.name()));
+                    }
+                    else {
+                        meta.property(i).writeOnGadget(v.value<void*>(), query.value(p.name()));
+                    }
                     continue;
                 }
-                meta.property(i).writeOnGadget(v.value<void*>(), query.value(normalize(p.name())));
+                if (isQObject) {
+                    meta.property(i).write(v.value<QObject*>(), query.value(normalize(p.name())));
+                }
+                else {
+                    meta.property(i).writeOnGadget(v.value<void*>(), query.value(normalize(p.name())));
+                }
             }
             else {
-                meta.property(i).writeOnGadget(v.data(), query.value(normalize(p.name())));
+                if (isQObject) {
+                    meta.property(i).write(v.value<QObject*>(), query.value(normalize(p.name())));
+                }
+                else {
+                    meta.property(i).writeOnGadget(v.data(), query.value(normalize(p.name())));
+                }
             }
         }
         list << v;
@@ -401,16 +464,25 @@ QVariant ORM::meta_select(const QMetaObject &meta, QString const& parent_name, Q
 void ORM::meta_insert(const QMetaObject &meta, QVariant &v, QString const& parent_name, QString const& property_name, long long parent_orm_rowid)
 {
     QString myName = parent_name + normalize(QString(meta.className()));
+    int classtype = QMetaType::type(meta.className());
+    bool isQObject = meta.inherits(QMetaType::metaObjectForType(QMetaType::QObjectStar));
     QStringList names, values;
     bool with_orm_rowid = withRowid(meta);
     for (int i = 0; i < meta.propertyCount(); ++i) {
         QMetaProperty p = meta.property(i);
-        if (!isPrimitive(p.userType()) && (!p.isStored() || isGadget(p.userType()) || isPointer(p.userType()) ||
+        if (!isPrimitive(p.userType()) && (!p.isStored() || !p.isReadable()  || isGadget(p.userType()) || isPointer(p.userType()) ||
                isSequentialContainer(p.userType()) || isAssociativeContainer(p.userType()))) {
             continue;
         }
         if (p.name() == QString("orm_rowid")) {
-            if (p.readOnGadget(v.value<void*>()).toLongLong() == 0) {
+            bool b;
+            if (isQObject) {
+                b = p.read(v.value<QObject*>()).toLongLong() == 0;
+            }
+            else {
+                b = p.readOnGadget(v.value<void*>()).toLongLong() == 0;
+            }
+            if (b) {
                 names << "parent_orm_rowid" << "property_name";
                 values << ":parent_orm_rowid" << ":property_name";
             }
@@ -432,10 +504,16 @@ void ORM::meta_insert(const QMetaObject &meta, QVariant &v, QString const& paren
     }
     for (int i = 0; i < meta.propertyCount(); ++i) {
         QMetaProperty p = meta.property(i);
-        if (!p.isStored() || isGadget(p.userType()) || isPointer(p.userType()) || isSequentialContainer(p.userType()) || isAssociativeContainer(p.userType())) {
+        if (!p.isStored()  || !p.isReadable()  || isGadget(p.userType()) || isPointer(p.userType()) ||
+                isSequentialContainer(p.userType()) || isAssociativeContainer(p.userType())) {
             continue;
         }
-        query.bindValue(QString(":") + normalize(p.name()), p.readOnGadget(v.value<void*>()));
+        if (isQObject) {
+            query.bindValue(QString(":") + normalize(p.name()), p.read(v.value<QObject*>()));
+        }
+        else {
+            query.bindValue(QString(":") + normalize(p.name()), p.readOnGadget(v.value<void*>()));
+        }
     }
     query.exec();
     if (query.lastError().isValid()) {
@@ -463,17 +541,28 @@ void ORM::meta_insert(const QMetaObject &meta, QVariant &v, QString const& paren
     if (with_orm_rowid && orm_rowid) {
         for (int i = 0; i < meta.propertyCount(); ++i) {
             QMetaProperty p = meta.property(i);
-            if (!p.isStored() || isPrimitive(p.userType())) {
+            if (!p.isStored() || !p.isReadable() || isPrimitive(p.userType())) {
                 continue;
             }
             if (p.name() == QString("orm_rowid")) {
-                p.writeOnGadget(v.value<void*>(), orm_rowid);
+                if (isQObject) {
+                    p.write(v.value<QObject*>(), orm_rowid);
+                }
+                else {
+                    p.writeOnGadget(v.value<void*>(), orm_rowid);
+                }
                 continue;
             }
             if (isGadget(p.userType())) {
                 const QMetaObject * o = QMetaType::metaObjectForType(p.userType());
                 if (o) {
-                    QVariant vvv = p.readOnGadget(v.value<void*>());
+                    QVariant vvv;
+                    if (isQObject) {
+                        vvv= p.read(v.value<QObject*>());
+                    }
+                    else {
+                        vvv= p.readOnGadget(v.value<void*>());
+                    }
                     meta_insert(*o, vvv, myName, QString(p.name()), orm_rowid);
                     continue;
                 }
@@ -484,7 +573,13 @@ void ORM::meta_insert(const QMetaObject &meta, QVariant &v, QString const& paren
                 }
                 const QMetaObject * o = QMetaType::metaObjectForType(typeToValue(p.userType()));
                 if (o) {
-                    QVariant vvv = p.readOnGadget(v.value<void*>());
+                    QVariant vvv;
+                    if (isQObject) {
+                        vvv = p.read(v.value<QObject*>());
+                    }
+                    else {
+                        vvv = p.readOnGadget(v.value<void*>());
+                    }
                     if (vvv.value<void*>()) {
                         vvv.convert(qMetaTypeId<void*>());
                         meta_insert(*o, vvv, myName, QString(p.name()), orm_rowid);
@@ -495,10 +590,18 @@ void ORM::meta_insert(const QMetaObject &meta, QVariant &v, QString const& paren
             if (isSequentialContainer(p.userType())) {
                 const QMetaObject * o = QMetaType::metaObjectForType(getSequentialContainerStoredType(p.userType()));
                 if (o) {
-                    QVariant qv = p.readOnGadget(v.value<void*>());
-                    QSequentialIterable si = qv.value<QSequentialIterable>();
-                    for (QVariant v : si) {
-                        meta_insert(*o, v, myName, QString(p.name()), orm_rowid);
+                    QVariant qv;
+                    if (isQObject) {
+                        qv = p.read(v.value<QObject*>());
+                    }
+                    else {
+                        qv = p.readOnGadget(v.value<void*>());
+                    }
+                    if (qv.isValid()) {
+                        QSequentialIterable si = qv.value<QSequentialIterable>();
+                        for (QVariant v : si) {
+                            meta_insert(*o, v, myName, QString(p.name()), orm_rowid);
+                        }
                     }
                     continue;
                 }
@@ -518,6 +621,8 @@ void ORM::meta_insert(const QMetaObject &meta, QVariant &v, QString const& paren
 void ORM::meta_update(const QMetaObject &meta, QVariant &v, QString const& parent_name, QString const& property_name, long long parent_orm_rowid)
 {
     QString myName = parent_name + normalize(QString(meta.className()));
+    int classtype = QMetaType::type(meta.className());
+    bool isQObject = meta.inherits(QMetaType::metaObjectForType(QMetaType::QObjectStar));
     QString query_text = QString("UPDATE %1 SET ").arg(myName);
     QStringList sets;
     if (!withRowid(meta)) {
@@ -542,11 +647,16 @@ void ORM::meta_update(const QMetaObject &meta, QVariant &v, QString const& paren
     query.bindValue(":property_name", property_name);
     for (int i = 0; i < meta.propertyCount(); ++i) {
         QMetaProperty p = meta.property(i);
-        if (!isPrimitive(p.userType()) && (!p.isStored() || isGadget(p.userType()) || isPointer(p.userType()) ||
+        if (!isPrimitive(p.userType()) && (!p.isStored() || !p.isReadable() || isGadget(p.userType()) || isPointer(p.userType()) ||
                isSequentialContainer(p.userType()) || isAssociativeContainer(p.userType()))) {
             continue;
         }
-        query.bindValue(QString(":") + p.name(), p.readOnGadget(v.value<void*>()));
+        if (isQObject) {
+            query.bindValue(QString(":") + p.name(), p.read(v.value<QObject*>()));
+        }
+        else {
+            query.bindValue(QString(":") + p.name(), p.readOnGadget(v.value<void*>()));
+        }
     }
     query.exec();
     if (query.lastError().isValid()) {
@@ -576,13 +686,19 @@ void ORM::meta_update(const QMetaObject &meta, QVariant &v, QString const& paren
 
     for (int i = 0; i < meta.propertyCount(); ++i) {
         QMetaProperty p = meta.property(i);
-        if (!p.isStored() || isPrimitive(p.userType())) {
+        if (!p.isStored() || !p.isReadable() || isPrimitive(p.userType())) {
             continue;
         }
         if (isGadget(p.userType())) {
             const QMetaObject * o = QMetaType::metaObjectForType(p.userType());
             if (o) {
-                QVariant vvv = p.readOnGadget(v.value<void*>());
+                QVariant vvv;
+                if (isQObject) {
+                    vvv = p.read(v.value<QObject*>());
+                }
+                else {
+                    vvv = p.readOnGadget(v.value<void*>());
+                }
                 meta_update(*o, vvv, myName, QString(p.name()), orm_rowid);
                 continue;
             }
@@ -593,7 +709,13 @@ void ORM::meta_update(const QMetaObject &meta, QVariant &v, QString const& paren
             }
             const QMetaObject * o = QMetaType::metaObjectForType(typeToValue(p.userType()));
             if (o) {
-                QVariant vvv = p.readOnGadget(v.value<void*>());
+                QVariant vvv;
+                if (isQObject) {
+                    vvv = p.read(v.value<QObject*>());
+                }
+                else {
+                    vvv = p.readOnGadget(v.value<void*>());
+                }
                 if (vvv.value<void*>()) {
                     vvv.convert(qMetaTypeId<void*>());
                     meta_update(*o, vvv, myName, QString(p.name()), orm_rowid);
@@ -604,10 +726,18 @@ void ORM::meta_update(const QMetaObject &meta, QVariant &v, QString const& paren
         if (isSequentialContainer(p.userType())) {
             const QMetaObject * o = QMetaType::metaObjectForType(getSequentialContainerStoredType(p.userType()));
             if (o) {
-                QVariant qv = p.readOnGadget(v.value<void*>());
-                QSequentialIterable si = qv.value<QSequentialIterable>();
-                for (QVariant v : si) {
-                    meta_update(*o, v, myName, QString(p.name()), orm_rowid);
+                QVariant qv;
+                if (isQObject) {
+                    qv = p.read(v.value<QObject*>());
+                }
+                else {
+                    qv = p.readOnGadget(v.value<void*>());
+                }
+                if (qv.isValid()) {
+                    QSequentialIterable si = qv.value<QSequentialIterable>();
+                    for (QVariant v : si) {
+                        meta_update(*o, v, myName, QString(p.name()), orm_rowid);
+                    }
                 }
                 continue;
             }
@@ -626,6 +756,8 @@ void ORM::meta_update(const QMetaObject &meta, QVariant &v, QString const& paren
 void ORM::meta_delete(const QMetaObject &meta, QVariant &v, QString const& parent_name, QString const& property_name, long long parent_orm_rowid)
 {
     QString myName = parent_name + normalize(QString(meta.className()));
+    int classtype = QMetaType::type(meta.className());
+    bool isQObject = meta.inherits(QMetaType::metaObjectForType(QMetaType::QObjectStar));
     long long orm_rowid = 0;
     if (!withRowid(meta)) {
         qWarning() << "delete: Opperation is not supported without orm_rowids. Type" << meta.className();
@@ -633,12 +765,17 @@ void ORM::meta_delete(const QMetaObject &meta, QVariant &v, QString const& paren
     }
     for (int i = 0; i < meta.propertyCount(); ++i) {
         QMetaProperty p = meta.property(i);
-        if (!isPrimitive(p.userType()) && (!p.isStored() || isGadget(p.userType()) || isPointer(p.userType()) ||
+        if (!isPrimitive(p.userType()) && (!p.isStored() || !p.isReadable() || isGadget(p.userType()) || isPointer(p.userType()) ||
                isSequentialContainer(p.userType()) || isAssociativeContainer(p.userType()))) {
             continue;
         }
         if (p.name() == QString("orm_rowid")) {
-            orm_rowid = p.readOnGadget(v.value<void*>()).toLongLong();
+            if (isQObject) {
+                orm_rowid = p.read(v.value<QObject*>()).toLongLong();
+            }
+            else {
+                orm_rowid = p.readOnGadget(v.value<void*>()).toLongLong();
+            }
             break;;
         }
     }
@@ -648,13 +785,19 @@ void ORM::meta_delete(const QMetaObject &meta, QVariant &v, QString const& paren
     if (orm_rowid) {
         for (int i = 0; i < meta.propertyCount(); ++i) {
             QMetaProperty p = meta.property(i);
-            if (!p.isStored() || isPrimitive(p.userType())) {
+            if (!p.isStored() || !p.isReadable() || isPrimitive(p.userType())) {
                 continue;
             }
             if (isGadget(p.userType())) {
                 const QMetaObject * o = QMetaType::metaObjectForType(p.userType());
                 if (o) {
-                    QVariant vvv = p.readOnGadget(v.value<void*>());
+                    QVariant vvv;
+                    if (isQObject) {
+                        vvv = p.read(v.value<QObject*>());
+                    }
+                    else {
+                        vvv = p.readOnGadget(v.value<void*>());
+                    }
                     meta_delete(*o, vvv, myName, QString(p.name()), orm_rowid);
                     continue;
                 }
@@ -665,7 +808,13 @@ void ORM::meta_delete(const QMetaObject &meta, QVariant &v, QString const& paren
                 }
                 const QMetaObject * o = QMetaType::metaObjectForType(typeToValue(p.userType()));
                 if (o) {
-                    QVariant vvv = p.readOnGadget((v.value<void*>()));
+                    QVariant vvv;
+                    if (isQObject) {
+                        vvv = p.read((v.value<QObject*>()));
+                    }
+                    else {
+                        vvv = p.readOnGadget((v.value<void*>()));
+                    }
                     meta_delete(*o, vvv, myName, QString(p.name()), orm_rowid);
                     continue;
                 }
@@ -673,7 +822,13 @@ void ORM::meta_delete(const QMetaObject &meta, QVariant &v, QString const& paren
             if (isSequentialContainer(p.userType())) {
                 const QMetaObject * o = QMetaType::metaObjectForType(getSequentialContainerStoredType(p.userType()));
                 if (o) {
-                    QVariant qv = p.readOnGadget(v.value<void*>());
+                    QVariant qv;
+                    if (isQObject) {
+                        qv = p.read(v.value<QObject*>());
+                    }
+                    else {
+                        qv = p.readOnGadget(v.value<void*>());
+                    }
                     QSequentialIterable si = qv.value<QSequentialIterable>();
                     for (QVariant v : si) {
                         meta_delete(*o, v, myName, QString(p.name()), orm_rowid);
@@ -716,6 +871,7 @@ void ORM::meta_delete(const QMetaObject &meta, QVariant &v, QString const& paren
 void ORM::meta_drop(const QMetaObject &meta, QString const& parent_name)
 {
     QString myName = parent_name + normalize(QString(meta.className()));
+    int classtype = QMetaType::type(meta.className());
     QString query_text = QString("DROP TABLE IF EXISTS %1;").arg(myName);
     for (int i = 0; i < meta.propertyCount(); ++i) {
         QMetaProperty p = meta.property(i);
@@ -763,6 +919,3 @@ void ORM::meta_drop(const QMetaObject &meta, QString const& parent_name)
         qDebug() << query.boundValues();
     }
 }
-
-
-
