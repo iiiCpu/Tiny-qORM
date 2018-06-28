@@ -16,6 +16,7 @@
 
 
 template <            typename T> void      registerTypeORM        (const char * c = nullptr);
+template <            typename T> void      registerQObjectORM     (const char * c = nullptr);
 
 namespace orm_pointers { struct ORMPointerStub; }
 
@@ -37,20 +38,24 @@ public:
     QString databaseName() const;
     void setDatabaseName(const QString & databaseName);
 
-    template <typename T>    void     create(             );
-    template <typename T>    QList<T> select(             );
-    template <typename T>    void     insert(      T  & t );
-    template <typename T>    void     insert(QList<T> & tl);
-    template <typename T>    void     delet (      T  & t );
-    template <typename T>    void     delet (QList<T> & tl);
-    template <typename T>    void     update(      T  & t );
-    template <typename T>    void     update(QList<T> & tl);
-    template <typename T>    void     drop  (             );
+    template <typename T>    void     create      (             );
+    template <typename T>    QList<T> select      (             );
+    template <typename T>    QList<T> selectObject(             );
+    template <typename T>    void     insert      (      T  & t );
+    template <typename T>    void     insert      (      T  * t );
+    template <typename T>    void     insert      (QList<T> & tl);
+    template <typename T>    void     delet       (      T  & t );
+    template <typename T>    void     delet       (      T  * t );
+    template <typename T>    void     delet       (QList<T> & tl);
+    template <typename T>    void     update      (      T  & t );
+    template <typename T>    void     update      (      T  * t );
+    template <typename T>    void     update      (QList<T> & tl);
+    template <typename T>    void     drop        (             );
 
 protected:
     QString m_databaseName;
 
-protected:
+public:
     void       meta_create   (QMetaObject const& meta,               QString const& parent_name = "t"                                                                      );
     QVariant   meta_select   (QMetaObject const& meta,               QString const& parent_name = "t", QString const& property_name = QString(), long long parent_rowid = 0);
     void       meta_insert   (QMetaObject const& meta, QVariant & v, QString const& parent_name = "t", QString const& property_name = QString(), long long parent_rowid = 0);
@@ -99,6 +104,17 @@ void ORM::insert(T & t) {
     }
 }
 template <typename T>
+void ORM::insert(T * t) {
+    const QMetaObject * o = QMetaType::metaObjectForType(qMetaTypeId<T*>());
+    if (o) {
+        QVariant v = QVariant::fromValue(t);
+        meta_insert(*o, v);
+    }
+    else {
+        qDebug("Error casting");
+    }
+}
+template <typename T>
 void ORM::insert(QList<T> & tl) {
     const QMetaObject * o = QMetaType::metaObjectForType(qMetaTypeId<T>());
     if (o) {
@@ -123,6 +139,17 @@ void ORM::delet(T & t) {
     }
 }
 template <typename T>
+void ORM::delet(T * t) {
+    const QMetaObject * o = QMetaType::metaObjectForType(qMetaTypeId<T*>());
+    if (o) {
+        QVariant v = QVariant::fromValue(t);
+        meta_delete(*o, v);
+    }
+    else {
+        qDebug("Error casting");
+    }
+}
+template <typename T>
 void ORM::delet(QList<T> & tl) {
     const QMetaObject * o = QMetaType::metaObjectForType(qMetaTypeId<T>());
     if (o) {
@@ -140,6 +167,17 @@ void ORM::update(T & t) {
     const QMetaObject * o = QMetaType::metaObjectForType(qMetaTypeId<T>());
     if (o) {
         QVariant v = QVariant::fromValue((void*)&t);
+        meta_update(*o, v);
+    }
+    else {
+        qDebug("Error casting");
+    }
+}
+template <typename T>
+void ORM::update(T * t) {
+    const QMetaObject * o = QMetaType::metaObjectForType(qMetaTypeId<T*>());
+    if (o) {
+        QVariant v = QVariant::fromValue(t);
         meta_update(*o, v);
     }
     else {
@@ -343,6 +381,18 @@ void registerTypeORM(const char * c)
     orm_pointers::registerTypePointers<T>();
     ORM::addPointerStub(orm_pointers::ORMPointerFunc<T>());
     orm_containers::registerTypeContainers<T>();
+}
+
+namespace orm_qobjects {
+    typedef QObject* (*creators)();
+    template <typename T> QObject* creator() { return new T(); }
+    void addQObjectStub(int type, orm_qobjects::creators stub);
+}
+
+template <typename T>
+void registerQObjectORM(const char * c)
+{
+    orm_qobjects::addQObjectStub(qRegisterMetaType<T*>(c), &orm_qobjects::creator<T>);
 }
 
 #endif // ORM_H
