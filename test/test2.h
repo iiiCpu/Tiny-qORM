@@ -67,6 +67,7 @@ namespace Test2
         int m_totalPunches;
         bool operator !=(Brother const& no) const { return m_name != no.m_name; }
         bool operator ==(Brother const& no) const { return m_name == no.m_name; }
+        bool operator <(Brother const& no) const { return m_name < no.m_name; }
         Brother& operator =(Brother const& no) {  m_name = no.m_name;  m_lastCombo = no.m_lastCombo; m_totalPunches = no.m_totalPunches; return *this; }
     };
     ORM_DECLARE_METATYPE_EX(Brother)
@@ -79,15 +80,26 @@ namespace Test2
         Q_PROPERTY(Dad dad MEMBER m_papa)
         Q_PROPERTY(QList<Brother> bros MEMBER m_bros)
         Q_PROPERTY(QList<int> draws MEMBER m_draws)
+        Q_PROPERTY(QHash<int,int> drows MEMBER m_drows)
+        Q_PROPERTY(QMap<int,Brother> drops MEMBER m_drops)
+        Q_PROPERTY(QMap<Brother,Brother> drags MEMBER m_drags)
     public:
         QString m_name;
         Mom m_mama;
         Dad m_papa;
         QList<Brother> m_bros;
         QList<int> m_draws;
+        QHash<int,int> m_drows;
+        QMap<int,Brother> m_drops;
+        QMap<Brother,Brother> m_drags;
         bool operator !=(Ur const& no) const { return m_name != no.m_name || m_mama != no.m_mama ||
-                    m_papa != no.m_papa || m_bros != no.m_bros || m_draws != no.m_draws; }
-        Ur& operator =(Ur const& no) {  m_name = no.m_name; m_mama = no.m_mama; m_papa = no.m_papa; m_bros = no.m_bros; m_draws = no.m_draws;  ; return *this; }
+                    m_papa != no.m_papa || m_bros != no.m_bros || m_draws != no.m_draws ||
+                    m_drows != no.m_drows || m_drops != no.m_drops || m_drags != no.m_drags; }
+        Ur& operator =(Ur const& no) {  m_name = no.m_name; m_mama = no.m_mama;
+                                        m_papa = no.m_papa; m_bros = no.m_bros;
+                                        m_draws = no.m_draws; m_drows = no.m_drows;
+                                        m_drops = no.m_drops; m_drags = no.m_drags;
+                                        return *this; }
     };
     ORM_DECLARE_METATYPE_EX(Ur)
 }

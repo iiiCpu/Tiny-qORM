@@ -4,8 +4,6 @@
 #include <QSqlQuery>
 #include <QSqlError>
 
-#include <vld.h>
-
 #include "orm.h"
 
 #include "test1.h"
@@ -96,7 +94,7 @@ QDebug operator<<(QDebug dbg, const Test2::Ur &ur)
 {
     QDebugStateSaver saver(dbg);
     dbg.nospace() << "Ur(" << &ur << ", name=" << ur.m_name << ", mom=" << ur.m_mama
-                  << ", dad=" << ur.m_papa << ", bros=" << ur.m_bros << ", draws=" << ur.m_draws <<  ")";
+                  << ", dad=" << ur.m_papa << ", bros=" << ur.m_bros << ", draws=" << ur.m_draws << ur.m_drows << ur.m_drops << ur.m_drags << ")";
     return dbg;
 }
 
@@ -107,6 +105,9 @@ void test2()
     registerTypeORM<Test2::Mom>("Test2::Mom");
     registerTypeORM<Test2::Car>("Test2::Car");
     registerTypeORM<Test2::Brother>("Test2::Brother");
+    orm_containers::registerHashAssociativeContainers<int,int>();
+    orm_containers::registerOrderedAssociativeContainers<int,Test2::Brother>();
+    orm_containers::registerOrderedAssociativeContainers<Test2::Brother,Test2::Brother>();
 
     Test2::Ur ur1;
     ur1.m_name = "Phil";
@@ -125,6 +126,9 @@ void test2()
     ur1.m_papa.m_name = "Phil";
     ur1.m_papa.m_car = new Test2::Car;
     ur1.m_papa.m_car->m_gas = 3.14;
+    ur1.m_drows[3]=14;
+    ur1.m_drops[3]=b12;
+    ur1.m_drags[b12]=b12;
 
     Test2::Ur ur2;
     ur2.m_name = "Bob";
@@ -147,7 +151,10 @@ void test2()
     orm.create<Test2::Ur>();
     orm.insert(ur1);
     orm.insert(ur2);
+    orm.update(ur2);
     QList<Test2::Ur> mine = orm.select<Test2::Ur>();
+    orm.update(mine[1]);
+    mine = orm.select<Test2::Ur>();
 
     if (mine.size() != 2) {
         qDebug() << "Test2: Size error";
@@ -161,7 +168,8 @@ void test2()
         qDebug() << "Test2: value 2 error";
         return;
     }
-    qDebug() << "Test12 passed";
+    qDebug() << "Test2: passed";
+    qDebug() << mine;
 
     delete ur1.m_papa.m_car;
     delete mine[0].m_papa.m_car;
@@ -182,11 +190,29 @@ int main(int argc, char *argv[])
         db.exec("PRAGMA synchronous = NORMAL;");
     }
 
+
+
     QApplication a(argc, argv);
 
 
     test1();
     test2();
+
+
+//    for (int i = 0; i < 0x00100000; ++i) {
+//        const QMetaObject * o = QMetaType::metaObjectForType(i);
+//        if (o) {
+//            qDebug() << i << o->className() << QMetaType::typeName(i);
+//            for (int j = 0; j <  o->propertyCount(); ++j) {
+//                qDebug() << "  " << o->property(j).userType() << QMetaType::typeName(o->property(j).userType()) << o->property(j).name();
+//            }
+//        }
+//        else {
+//            if (QMetaType::typeName(i)) {
+//                qDebug() << i << QMetaType::typeName(i);
+//            }
+//        }
+//    }
 
     return 0;
 }
