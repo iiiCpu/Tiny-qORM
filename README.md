@@ -90,11 +90,13 @@ struct Ur
     Q_PROPERTY(Mom mom MEMBER m_mama)
     Q_PROPERTY(Dad dad MEMBER m_papa)
     Q_PROPERTY(QList<Brother> bros MEMBER m_bros)
+    Q_PROPERTY(QList<int> drows MEMBER m_drows)
 public:
     QString m_name;
     Mom m_mama;
     Dad m_papa;
     QList<Brother> m_bros;
+	QList<int> m_drows;
 };
 Q_DECLARE_METATYPE(Ur)
 ```
@@ -167,7 +169,7 @@ That's all for now.
 * Q.: What types are supported by your ORM?
 * A.: 
   * ` + `  Any primitive type. At least I hope so.
-  * ` + `  Any registered `Q_ENUM`/`Q_GADGET`/`Q_OBJECT`, `QList`\`QVector` of registered types, (smart)pointers to gadgets.
+  * ` + `  Any registered `Q_ENUM`/`Q_GADGET`/`Q_OBJECT`, `QList`\`QVector` of registered or primitive types, (smart)pointers to gadgets.
   * ` + `  Any type with valid `T`->`QVariant`->`T` conversion. Add it to primitive type list with `ORM::addPrimitiveType`
   * `+/-` std containers are not supported but easy to add, goto `orm_containers` namespace.
   * ` -`  Static arrays and pointers to arrays will be never supported.

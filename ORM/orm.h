@@ -28,13 +28,13 @@ public:
     virtual ~ORM();
 
     static void addPrimitiveType(int metaclassid);
-    template <typename T> static void addPrimitiveType(){ addPrimitiveType(qMetaTypeId<T>()); }
     static void removePrimitiveType(int metaclassid);
+    template <typename T> static void addPrimitiveType(){ addPrimitiveType(qMetaTypeId<T>()); }
     template <typename T> static void removePrimitiveType(){ removePrimitiveType(qMetaTypeId<T>()); }
 
     static void addPointerStub(orm_pointers::ORMPointerStub const&);
 
-    static void addPairType(int firstType, int secondType, int pairType);
+    static void addPairType         (int firstType, int secondType, int pairType);
     static void addContainerPairType(int firstType, int secondType, int pairType);
 
 
@@ -72,19 +72,28 @@ protected:
     QMap<QString, QSqlQuery> updateQueries;
     QMap<QString, QSqlQuery> selectQueries;
 
+    virtual QString generate_table_name  (QString const& parent_name, QString const& property_name, QString const& class_name) const;
+    virtual long long get_last_inserted_rowid(QSqlQuery & query) const;
+    virtual long long get_last_updated_rowid (QSqlQuery & query) const;
+    virtual QString generate_create_query(QString const& parent_name, QString const& property_name, QString const& class_name, QStringList const& names, QList<int> const& types                       ) const;
+    virtual QString generate_select_query(QString const& parent_name, QString const& property_name, QString const& class_name, QStringList const& names, QList<int> const& types, bool parent_orm_rowid) const;
+    virtual QString generate_insert_query(QString const& parent_name, QString const& property_name, QString const& class_name, QStringList const& names, QList<int> const& types, bool parent_orm_rowid) const;
+    virtual QString generate_update_query(QString const& parent_name, QString const& property_name, QString const& class_name, QStringList const& names, QList<int> const& types, bool parent_orm_rowid) const;
+    virtual QString generate_delete_query(QString const& parent_name, QString const& property_name, QString const& class_name,                                                    bool parent_orm_rowid) const;
+    virtual QString generate_drop_query  (QString const& parent_name, QString const& property_name, QString const& class_name                                                                          ) const;
 public:
-    void       meta_create   (QMetaObject const& meta,               QString const& parent_name = "t"                                                                      );
+    void       meta_create   (QMetaObject const& meta,               QString const& parent_name = "t", QString const& property_name = QString()                            );
     QVariant   meta_select   (QMetaObject const& meta,               QString const& parent_name = "t", QString const& property_name = QString(), long long parent_rowid = 0);
     void       meta_insert   (QMetaObject const& meta, QVariant & v, QString const& parent_name = "t", QString const& property_name = QString(), long long parent_rowid = 0);
     void       meta_update   (QMetaObject const& meta, QVariant & v, QString const& parent_name = "t", QString const& property_name = QString(), long long parent_rowid = 0);
     void       meta_delete   (QMetaObject const& meta, QVariant & v, QString const& parent_name = "t", QString const& property_name = QString(), long long parent_rowid = 0);
-    void       meta_drop     (QMetaObject const& meta,               QString const& parent_name = "t"                                                                      );
-    void meta_create_pair(int metaclass, const QString &parent_name);
-    QVariant meta_select_pair(int usermetatype, const QString &parent_name, const QString &property_name, long long parent_orm_rowid);
-    void meta_insert_pair(int usermetatype, QVariant &v, const QString &parent_name, const QString &property_name, long long parent_orm_rowid);
-    void meta_update_pair(int usermetatype, QVariant &v, const QString &parent_name, const QString &property_name, long long parent_orm_rowid);
-    void meta_delete_pair(int usermetatype, QVariant &v, const QString &parent_name, const QString &property_name, long long parent_orm_rowid);
-    void meta_drop_pair(int usermetatype, const QString &parent_name);
+    void       meta_drop     (QMetaObject const& meta,               QString const& parent_name = "t", QString const& property_name = QString()                            );
+    void     meta_create_pair(int usermetatype,              const QString &parent_name, QString const& property_name);
+    QVariant meta_select_pair(int usermetatype,              const QString &parent_name, QString const& property_name, long long parent_orm_rowid);
+    void     meta_insert_pair(int usermetatype, QVariant &v, const QString &parent_name, QString const& property_name, long long parent_orm_rowid);
+    void     meta_update_pair(int usermetatype, QVariant &v, const QString &parent_name, QString const& property_name, long long parent_orm_rowid);
+    void     meta_delete_pair(int usermetatype, QVariant &v, const QString &parent_name, QString const& property_name, long long parent_orm_rowid);
+    void     meta_drop_pair  (int usermetatype,              const QString &parent_name, QString const& property_name);
 };
 
 
@@ -111,7 +120,7 @@ QList<T> ORM::select() {
 }
 template <typename T>
 void ORM::insert(T & t) {
-    QVariant v = QVariant::fromValue((void*)&t);
+    QVariant v = QVariant::fromValue(reinterpret_cast<void*>(&t));
     meta_insert(t.staticMetaObject, v);
 }
 template <typename T>
@@ -124,13 +133,13 @@ void ORM::insert(T * t) {
 template <typename T>
 void ORM::insert(QList<T> & tl) {
     for (T & t : tl) {
-        QVariant v = QVariant::fromValue((void*)&t);
+        QVariant v = QVariant::fromValue(reinterpret_cast<void*>(&t));
         meta_insert(t.staticMetaObject, v);
     }
 }
 template <typename T>
 void ORM::delet(T & t) {
-    QVariant v = QVariant::fromValue((void*)&t);
+    QVariant v = QVariant::fromValue(reinterpret_cast<void*>(&t));
     meta_delete(t.staticMetaObject, v);
 }
 template <typename T>
@@ -143,13 +152,13 @@ void ORM::delet(T * t) {
 template <typename T>
 void ORM::delet(QList<T> & tl) {
     for (T & t : tl) {
-        QVariant v = QVariant::fromValue((void*)&t);
+        QVariant v = QVariant::fromValue(reinterpret_cast<void*>(&t));
         meta_delete(t.staticMetaObject, v);
     }
 }
 template <typename T>
 void ORM::update(T & t) {
-    QVariant v = QVariant::fromValue((void*)&t);
+    QVariant v = QVariant::fromValue(reinterpret_cast<void*>(&t));
     meta_update(t.staticMetaObject, v);
 }
 template <typename T>
@@ -162,7 +171,7 @@ void ORM::update(T * t) {
 template <typename T>
 void ORM::update(QList<T> & tl) {
     for (T & t : tl) {
-        QVariant v = QVariant::fromValue((void*)&t);
+        QVariant v = QVariant::fromValue(reinterpret_cast<void*>(&t));
         meta_update(t.staticMetaObject, v);
     }
 }
@@ -183,10 +192,10 @@ namespace orm_pointers {
     template <typename T> QSharedPointer <T> toPointerS(T const& t){ QSharedPointer <T> p  (new T); *p = t; return p; }
     template <typename T> std::shared_ptr<T> toPointers(T const& t){ std::shared_ptr<T> p  (new T); *p = t; return p; }
 
-    template <typename T> void* toVPointer (                T  const& t){ return (void*)const_cast<T*>(&t       ); }
-    template <typename T> void* toVPointerP(                T *       t){ return (void*)                t        ; }
-    template <typename T> void* toVPointerS(QSharedPointer <T> const& t){ return (void*)const_cast<T*>( t.data()); }
-    template <typename T> void* toVPointers(std::shared_ptr<T> const& t){ return (void*)const_cast<T*>( t.get ()); }
+    template <typename T> void* toVPointer (                T  const& t){ return reinterpret_cast<void*>(const_cast<T*>(&t       )); }
+    template <typename T> void* toVPointerP(                T *       t){ return reinterpret_cast<void*>(                t        ); }
+    template <typename T> void* toVPointerS(QSharedPointer <T> const& t){ return reinterpret_cast<void*>(const_cast<T*>( t.data())); }
+    template <typename T> void* toVPointers(std::shared_ptr<T> const& t){ return reinterpret_cast<void*>(const_cast<T*>( t.get ())); }
 
     template <typename T>                 T* fromVoidP(void* t){ return                    reinterpret_cast<T*>(t) ; }
     template <typename T> QSharedPointer <T> fromVoidS(void* t){ return QSharedPointer <T>(reinterpret_cast<T*>(t)); }
@@ -208,12 +217,12 @@ namespace orm_pointers {
         stub.T = qMetaTypeId<T>();
         stub.pT = qRegisterMetaType<T*>();
 
-        QMetaType::registerConverter<T ,                T*>(&toPointer <T>);
+        QMetaType::registerConverter<T , T*   >(&toPointer <T>);
 
-        QMetaType::registerConverter<                T , void*>(&toVPointer <T>);
-        QMetaType::registerConverter<                T*, void*>(&toVPointerP<T>);
+        QMetaType::registerConverter<T , void*>(&toVPointer <T>);
+        QMetaType::registerConverter<T*, void*>(&toVPointerP<T>);
 
-        QMetaType::registerConverter<void*,                 T*>(&fromVoidP<T>);
+        QMetaType::registerConverter<void*, T*>(&fromVoidP<T>);
         return stub;
     }
     template <typename T>
@@ -226,10 +235,6 @@ namespace orm_pointers {
         stub.WT = qRegisterMetaType<QWeakPointer   <T>>();
         stub.sT = qRegisterMetaType<std::shared_ptr<T>>();
         stub.wT = qRegisterMetaType<std::weak_ptr  <T>>();
-
-        QMetaType::registerConverter<T ,                T*>(&toPointer <T>);
-        QMetaType::registerConverter<T, QSharedPointer <T>>(&toPointerS<T>);
-        QMetaType::registerConverter<T, std::shared_ptr<T>>(&toPointers<T>);
 
         QMetaType::registerConverter<                T , void*>(&toVPointer <T>);
         QMetaType::registerConverter<                T*, void*>(&toVPointerP<T>);
@@ -571,7 +576,7 @@ int registerTypeORM(const char * c)
 {
     int type = 0;
     if (c) {
-        type = qRegisterMetaType<T >(c);
+        type = qRegisterMetaType<T>(c);
     }
     else {
         type = qRegisterMetaType<T>();

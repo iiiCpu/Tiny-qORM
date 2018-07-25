@@ -10,6 +10,7 @@
 #include "test2.h"
 
 #include <QMetaProperty>
+#include <QDataStream>
 
 
 QDebug operator<<(QDebug dbg, Test1::U const& ur)
@@ -98,13 +99,16 @@ QDebug operator<<(QDebug dbg, const Test2::Ur &ur)
     return dbg;
 }
 
+Q_DECLARE_METATYPE(QFile*)
+
 void test2()
 {
-    registerTypeORM<Test2::Ur>("Test2::Ur");
-    registerTypeORM<Test2::Dad>("Test2::Dad");
-    registerTypeORM<Test2::Mom>("Test2::Mom");
-    registerTypeORM<Test2::Car>("Test2::Car");
-    registerTypeORM<Test2::Brother>("Test2::Brother");
+    registerTypeORM<Test2::Ur>();
+    registerTypeORM<Test2::Dad>();
+    registerTypeORM<Test2::Mom>();
+    registerTypeORM<Test2::Car>();
+    registerTypeORM<Test2::Brother>();
+    orm_containers::registerTypeSequentialContainers<int>();
     orm_containers::registerHashAssociativeContainers<int,int>();
     orm_containers::registerOrderedAssociativeContainers<int,Test2::Brother>();
     orm_containers::registerOrderedAssociativeContainers<Test2::Brother,Test2::Brother>();
@@ -155,6 +159,7 @@ void test2()
     QList<Test2::Ur> mine = orm.select<Test2::Ur>();
     orm.update(mine[1]);
     mine = orm.select<Test2::Ur>();
+    qDebug() << mine;
 
     if (mine.size() != 2) {
         qDebug() << "Test2: Size error";
@@ -169,7 +174,6 @@ void test2()
         return;
     }
     qDebug() << "Test2: passed";
-    qDebug() << mine;
 
     delete ur1.m_papa.m_car;
     delete mine[0].m_papa.m_car;
@@ -195,24 +199,25 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
 
 
+
     test1();
     test2();
 
 
-//    for (int i = 0; i < 0x00100000; ++i) {
-//        const QMetaObject * o = QMetaType::metaObjectForType(i);
-//        if (o) {
-//            qDebug() << i << o->className() << QMetaType::typeName(i);
-//            for (int j = 0; j <  o->propertyCount(); ++j) {
-//                qDebug() << "  " << o->property(j).userType() << QMetaType::typeName(o->property(j).userType()) << o->property(j).name();
-//            }
-//        }
-//        else {
-//            if (QMetaType::typeName(i)) {
-//                qDebug() << i << QMetaType::typeName(i);
-//            }
-//        }
-//    }
+    for (int i = 0; i < 0x00100000; ++i) {
+        const QMetaObject * o = QMetaType::metaObjectForType(i);
+        if (o) {
+            qDebug() << i << o->className() << QMetaType::typeName(i);
+            for (int j = 0; j <  o->propertyCount(); ++j) {
+                qDebug() << "  " << o->property(j).userType() << QMetaType::typeName(o->property(j).userType()) << o->property(j).name();
+            }
+        }
+        else {
+            if (QMetaType::typeName(i)) {
+                qDebug() << i << QMetaType::typeName(i);
+            }
+        }
+    }
 
     return 0;
 }
