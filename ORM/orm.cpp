@@ -19,6 +19,8 @@ static QMap<int, QPair<int, int>> assContTypeMap;
 static QMap<int, orm_qobjects::creators> objectMap;
 static QMap<int, orm_pointers::ORMPointerStub> pointerMap;
 static QSet<int> primitiveContainers;
+static QSet<int> primitiveStringContainers;
+static QSet<int> primitiveRawContainers;
 static bool orm_once = true;
 
 void orm_qobjects::addQObjectStub(int type, orm_qobjects::creators stub)
@@ -60,6 +62,29 @@ void ORM::addPrimitiveType(int metaclassid)
 void ORM::removePrimitiveType(int metaclassid)
 {
     primitiveContainers.remove(metaclassid);
+}
+
+void ORM::addPrimitiveStringType(int metaclassid)
+{
+    Q_ASSERT_X( QMetaType::hasRegisteredConverterFunction(metaclassid, qMetaTypeId<QString>()) &&
+                QMetaType::hasRegisteredConverterFunction(qMetaTypeId<QString>(), metaclassid),
+                "addPrimitiveStringType", "Needs registred converters T->QString->T");
+    primitiveStringContainers << metaclassid;
+}
+
+void ORM::removePrimitiveStringType(int metaclassid)
+{
+    primitiveStringContainers.remove(metaclassid);
+}
+
+void ORM::addPrimitiveRawType(int metaclassid)
+{
+    primitiveRawContainers << metaclassid;
+}
+
+void ORM::removePrimitiveRawType(int metaclassid)
+{
+    primitiveRawContainers.remove(metaclassid);
 }
 
 void registerPrimitiveTypeContainers()
@@ -113,6 +138,12 @@ int typeToValue(int metatypeid) {
 
 bool isPrimitive(int metatypeid) {
     return primitiveContainers.contains(metatypeid);
+}
+bool isPrimitiveString(int metatypeid) {
+    return primitiveStringContainers.contains(metatypeid);
+}
+bool isPrimitiveRaw(int metatypeid) {
+    return primitiveRawContainers.contains(metatypeid);
 }
 
 bool isSequentialContainer(int metatypeid)
@@ -277,8 +308,14 @@ QString ORM::normalize(const QString & str) const
     return "_" + s.replace(regExp1, "\\1_\\2").replace(regExp2, "\\1_\\2").toLower().replace(regExp3, "_");
 }
 QString ORM::TYPE(int type_id) const {
-    if (primitiveContainers.contains(type_id)) {
+    if (isPrimitive(type_id)) {
         return "TEXT";
+    }
+    if (isPrimitiveString(type_id)) {
+        return "TEXT";
+    }
+    if (isPrimitiveRaw(type_id)) {
+        return "BLOB";
     }
     switch(type_id) {
     case QMetaType::Bool:
@@ -294,13 +331,14 @@ QString ORM::TYPE(int type_id) const {
     case QMetaType::UShort:
     case QMetaType::UChar:
     case QMetaType::Float:
-        return "NUMERIC";
     case QMetaType::QChar:
+        return "NUMERIC";
     case QMetaType::QString:
     case QMetaType::QDate:
     case QMetaType::QTime:
     case QMetaType::QDateTime:
     case QMetaType::QUrl:
+    case QMetaType::QUuid:
         return "TEXT";
     case QMetaType::UnknownType:
     default:
@@ -484,10 +522,46 @@ ORM::ORM(const QString & dbname) : m_databaseName(QSqlDatabase::defaultConnectio
         registerTypeORM<ORMQVariantPair>();
         registerTypeORM<ORMPairStub>();
         registerTypeORM<ORMHashMapStub>();
-        addPrimitiveType<QPalette>();
-        addPrimitiveType<QFont>();
-        addPrimitiveType<QLocale>();
-        addPrimitiveType<QSizePolicy>();
+        addPrimitiveRawType<QChar>();
+        addPrimitiveRawType<QStringList>();
+        addPrimitiveRawType<QBitArray>();
+        addPrimitiveRawType<QLocale>();
+        addPrimitiveRawType<QRect>();
+        addPrimitiveRawType<QRectF>();
+        addPrimitiveRawType<QSize>();
+        addPrimitiveRawType<QSizeF>();
+        addPrimitiveRawType<QLine>();
+        addPrimitiveRawType<QLineF>();
+        addPrimitiveRawType<QPoint>();
+        addPrimitiveRawType<QPointF>();
+        addPrimitiveRawType<QRegExp>();
+        addPrimitiveRawType<QEasingCurve>();
+        addPrimitiveRawType<QRegularExpression>();
+        addPrimitiveRawType<QByteArrayList>();
+        addPrimitiveRawType<QFont>();
+        addPrimitiveRawType<QPixmap>();
+        addPrimitiveRawType<QBrush>();
+        addPrimitiveRawType<QColor>();
+        addPrimitiveRawType<QPalette>();
+        addPrimitiveRawType<QIcon>();
+        addPrimitiveRawType<QImage>();
+        addPrimitiveRawType<QPolygon>();
+        addPrimitiveRawType<QRegion>();
+        addPrimitiveRawType<QBitmap>();
+        addPrimitiveRawType<QCursor>();
+        addPrimitiveRawType<QKeySequence>();
+        addPrimitiveRawType<QPen>();
+        addPrimitiveRawType<QTextLength>();
+        addPrimitiveRawType<QTextFormat>();
+        addPrimitiveRawType<QMatrix>();
+        addPrimitiveRawType<QTransform>();
+        addPrimitiveRawType<QMatrix4x4>();
+        addPrimitiveRawType<QVector2D>();
+        addPrimitiveRawType<QVector3D>();
+        addPrimitiveRawType<QVector4D>();
+        addPrimitiveRawType<QQuaternion>();
+        addPrimitiveRawType<QPolygonF>();
+        addPrimitiveRawType<QSizePolicy>();
     }
 }
 ORM::~ORM()
@@ -579,6 +653,16 @@ void     ORM::meta_create(const QMetaObject &meta, QString const& parent_name, Q
             query_columns_types << p.userType();
             continue;
         }
+        if (isPrimitiveString(p.userType())) {
+            query_columns << p.name();
+            query_columns_types << qMetaTypeId<QString>();
+            continue;
+        }
+        if (isPrimitiveRaw(p.userType())) {
+            query_columns << p.name();
+            query_columns_types << qMetaTypeId<QByteArray>();
+            continue;
+        }
         if (isGadget(p.userType()) || isPointer(p.userType()) || isSequentialContainer(p.userType()) ||
                 isAssociativeContainer(p.userType()) || isPair(p.userType())) {
             continue;
@@ -587,12 +671,13 @@ void     ORM::meta_create(const QMetaObject &meta, QString const& parent_name, Q
         query_columns_types << p.userType();
     }
     QSqlQuery query(QSqlDatabase::database(m_databaseName, true));
-    query.exec(generate_create_query(parent_name, property_name, QString(meta.className()), query_columns, query_columns_types));
+    query.exec(generate_create_query(parent_name, property_name, meta.className(), query_columns, query_columns_types));
     h::checkQueryErrors(query, meta.className(), table_name);
 
     for (int i = 0; i < meta.propertyCount(); ++i) {
         QMetaProperty p = meta.property(i);
-        if (isPrimitive(p.userType())) {
+        if (isPrimitive(p.userType()) || isPrimitiveString(p.userType()) || isPrimitiveRaw(p.userType())) {
+
             continue;
         }
         if (isGadget(p.userType())) {
@@ -654,39 +739,49 @@ void     ORM::meta_create_pair  (int usermetatype, QString const& parent_name, Q
     query_columns << "orm_rowid";
     query_types << qMetaTypeId<long long>();
     for (int j = 0; j < 2; ++j) {
-        int i = j == 0 ? assContTypeMap[usermetatype].first : assContTypeMap[usermetatype].second;
+        int userType = j == 0 ? assContTypeMap[usermetatype].first : assContTypeMap[usermetatype].second;
         QString name = j == 0 ? "key" : "value";
-        if (isPrimitive(i)) {
+        if (isPrimitive(userType)) {
             query_columns << name;
-            query_types << i;
+            query_types << userType;
             continue;
         }
-        if (isGadget(i) || isPointer(i) || isSequentialContainer(i) ||
-                isAssociativeContainer(i) || isPair(i)) {
+        if (isPrimitiveString(userType)) {
+            query_columns << name;
+            query_types << qMetaTypeId<QString>();
+            continue;
+        }
+        if (isPrimitiveRaw(userType)) {
+            query_columns << name;
+            query_types << qMetaTypeId<QByteArray>();
+            continue;
+        }
+        if (isGadget(userType) || isPointer(userType) || isSequentialContainer(userType) ||
+                isAssociativeContainer(userType) || isPair(userType)) {
             continue;
         }
         query_columns << name;
-        query_types << i;
+        query_types << userType;
     }
     QSqlQuery query(QSqlDatabase::database(m_databaseName, true));
     query.exec(generate_create_query(parent_name, property_name, className, query_columns, query_types));
     h::checkQueryErrors(query, "", table_name);
     for (int j = 0; j < 2; ++j) {
-        int i = j == 0 ? assContTypeMap[usermetatype].first : assContTypeMap[usermetatype].second;
+        int userType = j == 0 ? assContTypeMap[usermetatype].first : assContTypeMap[usermetatype].second;
         QString name = j == 0 ? "key" : "value";
-        if (isPrimitive(i)) {
+        if (isPrimitive(userType) || isPrimitiveString(userType) || isPrimitiveRaw(userType)) {
             continue;
         }
-        if (isGadget(i)) {
-            const QMetaObject * o = QMetaType::metaObjectForType(i);
+        if (isGadget(userType)) {
+            const QMetaObject * o = QMetaType::metaObjectForType(userType);
             if (o) {
                 meta_create(*o, table_name, name);
                 continue;
             }
         }
-        if (isPointer(i)) {
-            if (!isWeakPointer(i)) {
-                const QMetaObject * o = QMetaType::metaObjectForType(typeToValue(i));
+        if (isPointer(userType)) {
+            if (!isWeakPointer(userType)) {
+                const QMetaObject * o = QMetaType::metaObjectForType(typeToValue(userType));
                 if (o) {
                     meta_create(*o, table_name, name);
                     continue;
@@ -694,15 +789,15 @@ void     ORM::meta_create_pair  (int usermetatype, QString const& parent_name, Q
             }
             continue;
         }
-        if (isSequentialContainer(i)) {
-            const QMetaObject * o = QMetaType::metaObjectForType(getSequentialContainerStoredType(i));
+        if (isSequentialContainer(userType)) {
+            const QMetaObject * o = QMetaType::metaObjectForType(getSequentialContainerStoredType(userType));
             if (o) {
                 meta_create(*o, table_name, name);
                 continue;
             }
         }
-        if (isAssociativeContainer(i) || isPair(i)) {
-            meta_create_pair(i, table_name, name);
+        if (isAssociativeContainer(userType) || isPair(userType)) {
+            meta_create_pair(userType, table_name, name);
             continue;
         }
     }
@@ -719,9 +814,19 @@ QVariant ORM::meta_select(const QMetaObject &meta, QString const& parent_name, Q
         QList<int> query_types;
         for (int i = 0; i < meta.propertyCount(); ++i) {
             QMetaProperty p = meta.property(i);
-            if (!isPrimitive(p.userType()) && (!p.isStored() || isGadget(p.userType()) ||
-                 isPointer(p.userType()) || isSequentialContainer(p.userType()) ||
-                 isAssociativeContainer(p.userType()))) {
+            if (!(isPrimitive(p.userType()) || isPrimitiveString(p.userType()) || isPrimitiveRaw(p.userType())) &&
+                    (!p.isStored() || isGadget(p.userType()) || isPointer(p.userType()) ||
+                     isSequentialContainer(p.userType()) || isAssociativeContainer(p.userType()))) {
+                continue;
+            }
+            if (isPrimitiveString(p.userType())) {
+                query_columns << p.name();
+                query_types << qMetaTypeId<QString>();
+                continue;
+            }
+            if (isPrimitiveRaw(p.userType())) {
+                query_columns << p.name();
+                query_types << qMetaTypeId<QByteArray>();
                 continue;
             }
             query_columns << p.name();
@@ -820,6 +925,16 @@ QVariant ORM::meta_select(const QMetaObject &meta, QString const& parent_name, Q
             if (p.isEnumType()) {
                 vv.convert(p.userType());
             }
+            if (isPrimitiveString(p.userType())) {
+                vv.convert(p.userType());
+            }
+            if (isPrimitiveRaw(p.userType())) {
+                QVariant w;
+                QByteArray array = vv.toByteArray();
+                QDataStream stream(&array,QIODevice::ReadWrite);
+                stream >> w;
+                vv = w;
+            }
             h::write(isQObject, v, p, vv);
         }
         list << v;
@@ -838,14 +953,22 @@ QVariant ORM::meta_select_pair  (int usermetatype, QString const& parent_name, Q
         query_columns << "orm_rowid";
         query_types << qMetaTypeId<long long>();
         for (int j = 0; j < 2; ++j) {
-            int i = j == 0 ? keyType : valueType;
+            int userType = j == 0 ? keyType : valueType;
             QString name = j == 0 ? "key" : "value";
-            if (!isPrimitive(i) && (isGadget(i) || isPointer(i) ||
-                                    isSequentialContainer(i) || isAssociativeContainer(i))) {
+            if (!(isPrimitive(userType) || isPrimitiveString(userType) || isPrimitiveRaw(userType)) &&
+                    (isGadget(userType) || isPointer(userType) || isSequentialContainer(userType) || isAssociativeContainer(userType))) {
                 continue;
             }
             query_columns << name;
-            query_types << i;
+            if (isPrimitiveString(userType)) {
+                query_types << qMetaTypeId<QString>();
+                continue;
+            }
+            if (isPrimitiveRaw(userType)) {
+                query_types << qMetaTypeId<QByteArray>();
+                continue;
+            }
+            query_types << userType;
         }
         QSqlQuery query(QSqlDatabase::database(m_databaseName, true));
         query.prepare(generate_select_query(parent_name, property_name, className,
@@ -864,11 +987,11 @@ QVariant ORM::meta_select_pair  (int usermetatype, QString const& parent_name, Q
         pair.m_orm_rowid = query.value("_orm_rowid").toLongLong();
         for (int j = 0; j < 2; ++j)
         {
-            int i = j == 0 ? keyType : valueType;
+            int userType = j == 0 ? keyType : valueType;
             QString name = j == 0 ? "key" : "value";
-            if (!isPrimitive(i)) {
-                if (isGadget(i)) {
-                    const QMetaObject * o = QMetaType::metaObjectForType(i);
+            if (!(isPrimitive(userType) || isPrimitiveString(userType) || isPrimitiveRaw(userType))) {
+                if (isGadget(userType)) {
+                    const QMetaObject * o = QMetaType::metaObjectForType(userType);
                     if (o) {
                         QVariantList vl = meta_select(*o, table_name, name, pair.m_orm_rowid).toList();
                         if (vl.size()) {
@@ -877,11 +1000,11 @@ QVariant ORM::meta_select_pair  (int usermetatype, QString const& parent_name, Q
                         continue;
                     }
                 }
-                if (isPointer(i)) {
-                    if (isWeakPointer(i)) {
+                if (isPointer(userType)) {
+                    if (isWeakPointer(userType)) {
                         continue;
                     }
-                    const QMetaObject * o = QMetaType::metaObjectForType(typeToValue(i));
+                    const QMetaObject * o = QMetaType::metaObjectForType(typeToValue(userType));
                     if (o) {
                         QVariantList vl = meta_select(*o, table_name, name, pair.m_orm_rowid).toList();
                         if (vl.size()) {
@@ -892,25 +1015,35 @@ QVariant ORM::meta_select_pair  (int usermetatype, QString const& parent_name, Q
                         continue;
                     }
                 }
-                if (isSequentialContainer(i)) {
-                    const QMetaObject * o = QMetaType::metaObjectForType(getSequentialContainerStoredType(i));
+                if (isSequentialContainer(userType)) {
+                    const QMetaObject * o = QMetaType::metaObjectForType(getSequentialContainerStoredType(userType));
                     if (o) {
                         pair[j] = meta_select(*o, table_name, name, pair.m_orm_rowid).toList();
                         continue;
                     }
                 }
-                if (isAssociativeContainer(i)) {
-                    QVariant qv = meta_select_pair(i, table_name, name, pair.m_orm_rowid);
-                    if (qv.canConvert(i)) {
-                        qv.convert(i);
+                if (isAssociativeContainer(userType)) {
+                    QVariant qv = meta_select_pair(userType, table_name, name, pair.m_orm_rowid);
+                    if (qv.canConvert(userType)) {
+                        qv.convert(userType);
                         pair[j] = qv;
                     }
                     continue;
                 }
             }
             QVariant vv = query.value(normalize(name));
-            if (QMetaType::typeFlags(i).testFlag(QMetaType::IsEnumeration)) {
-                vv.convert(i);
+            if (QMetaType::typeFlags(userType).testFlag(QMetaType::IsEnumeration)) {
+                vv.convert(userType);
+            }
+            if (isPrimitiveString(userType)) {
+                vv.convert(userType);
+            }
+            if (isPrimitiveRaw(userType)) {
+                QVariant w;
+                QByteArray array = vv.toByteArray();
+                QDataStream stream(&array,QIODevice::ReadWrite);
+                stream >> w;
+                vv = w;
             }
             pair[j] = vv;
         }
@@ -930,7 +1063,8 @@ void     ORM::meta_insert(const QMetaObject &meta, QVariant &v, QString const& p
         QList<int> types;
         for (int i = 0; i < meta.propertyCount(); ++i) {
             QMetaProperty p = meta.property(i);
-            if (!isPrimitive(p.userType()) && (!p.isStored() || !p.isReadable()  || isGadget(p.userType()) || isPointer(p.userType()) ||
+            if (!(isPrimitive(p.userType()) || isPrimitiveString(p.userType()) || isPrimitiveRaw(p.userType())) &&
+                    (!p.isStored() || !p.isReadable()  || isGadget(p.userType()) || isPointer(p.userType()) ||
                    isSequentialContainer(p.userType()) || isAssociativeContainer(p.userType()))) {
                 continue;
             }
@@ -941,6 +1075,14 @@ void     ORM::meta_insert(const QMetaObject &meta, QVariant &v, QString const& p
                 }
             }
             names << p.name();
+            if (isPrimitiveString(p.userType())) {
+                types << qMetaTypeId<QString>();
+                continue;
+            }
+            if (isPrimitiveRaw(p.userType())) {
+                types << qMetaTypeId<QByteArray>();
+                continue;
+            }
             types << p.userType();
         }
         QSqlQuery query(QSqlDatabase::database(m_databaseName, true));
@@ -954,14 +1096,26 @@ void     ORM::meta_insert(const QMetaObject &meta, QVariant &v, QString const& p
     }
     for (int i = 0; i < meta.propertyCount(); ++i) {
         QMetaProperty p = meta.property(i);
-        if (!isPrimitive(p.userType()) && (!p.isStored()  || !p.isReadable()  || isGadget(p.userType()) || isPointer(p.userType()) ||
+        if (!(isPrimitive(p.userType()) || isPrimitiveString(p.userType()) || isPrimitiveRaw(p.userType())) &&
+                (!p.isStored()  || !p.isReadable()  || isGadget(p.userType()) || isPointer(p.userType()) ||
              isSequentialContainer(p.userType()) || isAssociativeContainer(p.userType()))) {
             continue;
         }
         if (q::isRowID(p) && (orm_rowid == 0 || orm_rowid == -1)) {
             continue;
         }
-        query.bindValue(QString(":") + p.name(), h::read(isQObject, v, p));
+        QVariant w = h::read(isQObject, v, p);
+        if (isPrimitiveString(p.userType())) {
+            w.convert(qMetaTypeId<QString>());
+        }
+        if (isPrimitiveRaw(p.userType())) {
+            QByteArray array;
+            QDataStream stream(&array,QIODevice::ReadWrite);
+            stream << w;
+            w = array;
+            //w.convert(qMetaTypeId<QByteArray>());
+        }
+        query.bindValue(QString(":") + p.name(), w);
     }
     query.exec();
     if (h::checkQueryErrors(query, meta.className(), table_name, property_name)) {
@@ -973,7 +1127,8 @@ void     ORM::meta_insert(const QMetaObject &meta, QVariant &v, QString const& p
         if (orm_rowid) {
             for (int i = 0; i < meta.propertyCount(); ++i) {
                 QMetaProperty p = meta.property(i);
-                if (!p.isStored() || !p.isReadable() || isPrimitive(p.userType())) {
+                if (!p.isStored() || !p.isReadable() || isPrimitive(p.userType()) ||
+                        isPrimitiveString(p.userType()) || isPrimitiveRaw(p.userType())) {
                     continue;
                 }
                 if (isGadget(p.userType())) {
@@ -1042,13 +1197,22 @@ void     ORM::meta_insert_pair  (int usermetatype, QVariant &v, QString const& p
         QStringList names;
         QList<int> types;
         for (int j = 0; j < 2; ++j) {
-            int i = j == 0 ? keyType : valueType;
+            int userType = j == 0 ? keyType : valueType;
             QString name = j == 0 ? "key" : "value";
-            if (!isPrimitive(i) && (isGadget(i) || isPointer(i) || isSequentialContainer(i) || isAssociativeContainer(i))) {
+            if (!(isPrimitive(userType) || isPrimitiveString(userType) || isPrimitiveRaw(userType)) &&
+                    (isGadget(userType) || isPointer(userType) || isSequentialContainer(userType) || isAssociativeContainer(userType))) {
                 continue;
             }
             names << name;
-            types << i;
+            if (isPrimitiveString(userType)) {
+                types << qMetaTypeId<QString>();
+                continue;
+            }
+            if (isPrimitiveRaw(userType)) {
+                types << qMetaTypeId<QByteArray>();
+                continue;
+            }
+            types << userType;
         }
         QSqlQuery query(QSqlDatabase::database(m_databaseName, true));
         query.prepare(generate_insert_query(parent_name, property_name, className,
@@ -1058,12 +1222,23 @@ void     ORM::meta_insert_pair  (int usermetatype, QVariant &v, QString const& p
     QSqlQuery & query = insertQueries[table_name];
     query.bindValue(":parent_orm_rowid", parent_orm_rowid);
     for (int j = 0; j < 2; ++j) {
-        int i = j == 0 ? keyType : valueType;
+        int userType = j == 0 ? keyType : valueType;
         QString name = j == 0 ? "key" : "value";
-        if (!isPrimitive(i) && (isGadget(i) || isPointer(i) || isSequentialContainer(i) || isAssociativeContainer(i))) {
+        if (!(isPrimitive(userType) || isPrimitiveString(userType) || isPrimitiveRaw(userType)) &&
+                (isGadget(userType) || isPointer(userType) || isSequentialContainer(userType) || isAssociativeContainer(userType))) {
             continue;
         }
-        query.bindValue(QString(":") + name, ops[j]);
+        QVariant w = ops[j];
+        if (isPrimitiveString(userType)) {
+            w.convert(qMetaTypeId<QString>());
+        }
+        if (isPrimitiveRaw(userType)) {
+            QByteArray array;
+            QDataStream stream(&array,QIODevice::ReadWrite);
+            stream << w;
+            w = array;
+        }
+        query.bindValue(QString(":") + name, w);
     }
     query.exec();
     if (h::checkQueryErrors(query, className, table_name, property_name)) {
@@ -1077,7 +1252,7 @@ void     ORM::meta_insert_pair  (int usermetatype, QVariant &v, QString const& p
     for (int j = 0; j < 2; ++j) {
         int i = j == 0 ? keyType : valueType;
         QString name = j == 0 ? "key" : "value";
-        if (isPrimitive(i)) {
+        if (isPrimitive(i) || isPrimitiveString(i) || isPrimitiveRaw(i)) {
             continue;
         }
         if (isGadget(i)) {
@@ -1147,7 +1322,8 @@ void     ORM::meta_update(const QMetaObject &meta, QVariant &v, QString const& p
         QList<int> types;
         for (int i = 0; i < meta.propertyCount(); ++i) {
             QMetaProperty p = meta.property(i);
-            if (!isPrimitive(p.userType()) && (!p.isStored() || isGadget(p.userType()) || isPointer(p.userType()) ||
+            if (!(isPrimitive(p.userType()) || isPrimitiveString(p.userType()) || isPrimitiveRaw(p.userType())) &&
+                    (!p.isStored() || isGadget(p.userType()) || isPointer(p.userType()) ||
                    isSequentialContainer(p.userType()) || isAssociativeContainer(p.userType()))) {
                 continue;
             }
@@ -1155,6 +1331,14 @@ void     ORM::meta_update(const QMetaObject &meta, QVariant &v, QString const& p
                 continue;
             }
             names << p.name();
+            if (isPrimitiveString(p.userType())) {
+                types << qMetaTypeId<QString>();
+                continue;
+            }
+            if (isPrimitiveRaw(p.userType())) {
+                types << qMetaTypeId<QByteArray>();
+                continue;
+            }
             types << p.userType();
         }
         QSqlQuery query(QSqlDatabase::database(m_databaseName, true));
@@ -1172,7 +1356,17 @@ void     ORM::meta_update(const QMetaObject &meta, QVariant &v, QString const& p
                isSequentialContainer(p.userType()) || isAssociativeContainer(p.userType()))) {
             continue;
         }
-        query.bindValue(QString(":") + p.name(), h::read(isQObject, v, p));
+        QVariant w = h::read(isQObject, v, p);
+        if (isPrimitiveString(p.userType())) {
+            w.convert(qMetaTypeId<QString>());
+        }
+        if (isPrimitiveRaw(p.userType())) {
+            QByteArray array;
+            QDataStream stream(&array,QIODevice::ReadWrite);
+            stream << w;
+            w = array;
+        }
+        query.bindValue(QString(":") + p.name(), w);
     }
     query.exec();
     if (h::checkQueryErrors(query, meta.className(), table_name, property_name)) {
@@ -1187,7 +1381,8 @@ void     ORM::meta_update(const QMetaObject &meta, QVariant &v, QString const& p
 
     for (int i = 0; i < meta.propertyCount(); ++i) {
         QMetaProperty p = meta.property(i);
-        if (!p.isStored() || !p.isReadable() || isPrimitive(p.userType())) {
+        if (!p.isStored() || !p.isReadable() || isPrimitive(p.userType()) ||
+                isPrimitiveString(p.userType()) || isPrimitiveRaw(p.userType())) {
             continue;
         }
         if (isGadget(p.userType())) {
@@ -1254,13 +1449,22 @@ void     ORM::meta_update_pair  (int usermetatype, QVariant &v, QString const& p
         QStringList names;
         QList<int> types;
         for (int j = 0; j < 2; ++j) {
-            int i = j == 0 ? keyType : valueType;
+            int userType = j == 0 ? keyType : valueType;
             QString name = j == 0 ? "key" : "value";
-            if (!isPrimitive(i) && (isGadget(i) || isPointer(i) || isSequentialContainer(i) || isAssociativeContainer(i))) {
+            if (!(isPrimitive(userType) || isPrimitiveString(userType) || isPrimitiveRaw(userType)) &&
+                    (isGadget(userType) || isPointer(userType) || isSequentialContainer(userType) || isAssociativeContainer(userType))) {
                 continue;
             }
             names << name;
-            types << i;
+            if (isPrimitiveString(userType)) {
+                types << qMetaTypeId<QString>();
+                continue;
+            }
+            if (isPrimitiveRaw(userType)) {
+                types << qMetaTypeId<QByteArray>();
+                continue;
+            }
+            types << userType;
         }
         QSqlQuery query(QSqlDatabase::database(m_databaseName, true));
         query.prepare(generate_update_query(parent_name, property_name, className,
@@ -1272,12 +1476,23 @@ void     ORM::meta_update_pair  (int usermetatype, QVariant &v, QString const& p
         query.bindValue(":parent_orm_rowid", parent_orm_rowid);
     }
     for (int j = 0; j < 2; ++j) {
-        int i = j == 0 ? keyType : valueType;
+        int userType = j == 0 ? keyType : valueType;
         QString name = j == 0 ? "key" : "value";
-        if (!isPrimitive(i) && (isGadget(i) || isPointer(i) || isSequentialContainer(i) || isAssociativeContainer(i))) {
+        if (!(isPrimitive(userType) || isPrimitiveString(userType) || isPrimitiveRaw(userType)) &&
+                (isGadget(userType) || isPointer(userType) || isSequentialContainer(userType) || isAssociativeContainer(userType))) {
             continue;
         }
-        query.bindValue(QString(":") + name, ops[j]);
+        QVariant w = ops[j];
+        if (isPrimitiveString(userType)) {
+            w.convert(qMetaTypeId<QString>());
+        }
+        if (isPrimitiveRaw(userType)) {
+            QByteArray array;
+            QDataStream stream(&array,QIODevice::ReadWrite);
+            stream << w;
+            w = array;
+        }
+        query.bindValue(QString(":") + name, w);
     }
     query.exec();
     if (h::checkQueryErrors(query, className, table_name, property_name)) {
@@ -1291,24 +1506,24 @@ void     ORM::meta_update_pair  (int usermetatype, QVariant &v, QString const& p
     }
 
     for (int j = 0; j < 2; ++j) {
-        int i = j == 0 ? keyType : valueType;
+        int userType = j == 0 ? keyType : valueType;
         QString name = j == 0 ? "key" : "value";
-        if (isPrimitive(i)) {
+        if (isPrimitive(userType) || isPrimitiveString(userType) || isPrimitiveRaw(userType)) {
             continue;
         }
-        if (isGadget(i)) {
-            const QMetaObject * o = QMetaType::metaObjectForType(i);
+        if (isGadget(userType)) {
+            const QMetaObject * o = QMetaType::metaObjectForType(userType);
             if (o) {
                 QVariant vv = ops[j];
                 meta_update(*o, vv, table_name, name, ops.m_orm_rowid);
                 continue;
             }
         }
-        if (isPointer(i)) {
-            if (isWeakPointer(i)) {
+        if (isPointer(userType)) {
+            if (isWeakPointer(userType)) {
                 continue;
             }
-            const QMetaObject * o = QMetaType::metaObjectForType(typeToValue(i));
+            const QMetaObject * o = QMetaType::metaObjectForType(typeToValue(userType));
             if (o) {
                 QVariant vvv = ops[j];
                 if (vvv.value<void*>()) {
@@ -1318,8 +1533,8 @@ void     ORM::meta_update_pair  (int usermetatype, QVariant &v, QString const& p
                 continue;
             }
         }
-        if (isSequentialContainer(i)) {
-            const QMetaObject * o = QMetaType::metaObjectForType(getSequentialContainerStoredType(i));
+        if (isSequentialContainer(userType)) {
+            const QMetaObject * o = QMetaType::metaObjectForType(getSequentialContainerStoredType(userType));
             if (o) {
                 QVariant qv = ops[j];
                 if (qv.isValid()) {
@@ -1331,18 +1546,18 @@ void     ORM::meta_update_pair  (int usermetatype, QVariant &v, QString const& p
                 continue;
             }
         }
-        if (isAssociativeContainer(i)) {
+        if (isAssociativeContainer(userType)) {
             QVariant qv = ops[j];
             if (qv.canConvert<ORMQVariantPair>()) {
                 qv.convert(qMetaTypeId<ORMQVariantPair>());
-                meta_update_pair(i, qv, table_name, name, ops.m_orm_rowid);
+                meta_update_pair(userType, qv, table_name, name, ops.m_orm_rowid);
                 continue;
             }
             if (qv.canConvert<QList<ORMQVariantPair>>()) {
                 QList<ORMQVariantPair> list = qv.value<QList<ORMQVariantPair>>();
                 for (ORMQVariantPair & v : list) {
                     QVariant vv = QVariant::fromValue(v);
-                    meta_update_pair(i, vv, table_name, name, ops.m_orm_rowid);
+                    meta_update_pair(userType, vv, table_name, name, ops.m_orm_rowid);
                 }
                 continue;
             }
@@ -1361,7 +1576,8 @@ void     ORM::meta_delete(const QMetaObject &meta, QVariant &v, QString const& p
     }
     for (int i = 0; i < meta.propertyCount(); ++i) {
         QMetaProperty p = meta.property(i);
-        if (!isPrimitive(p.userType()) && (!p.isStored() || !p.isReadable() || isGadget(p.userType()) || isPointer(p.userType()) ||
+        if (!(isPrimitive(p.userType()) || isPrimitiveString(p.userType()) || isPrimitiveRaw(p.userType())) &&
+                (!p.isStored() || !p.isReadable() || isGadget(p.userType()) || isPointer(p.userType()) ||
                isSequentialContainer(p.userType()) || isAssociativeContainer(p.userType()))) {
             continue;
         }
@@ -1375,7 +1591,7 @@ void     ORM::meta_delete(const QMetaObject &meta, QVariant &v, QString const& p
     if (orm_rowid) {
         for (int i = 0; i < meta.propertyCount(); ++i) {
             QMetaProperty p = meta.property(i);
-            if (!p.isStored() || !p.isReadable() || isPrimitive(p.userType())) {
+            if (!p.isStored() || !p.isReadable() || isPrimitive(i) || isPrimitiveString(i) || isPrimitiveRaw(i)) {
                 continue;
             }
             if (isGadget(p.userType())) {
@@ -1444,30 +1660,30 @@ void     ORM::meta_delete_pair  (int usermetatype, QVariant &v, QString const& p
     int keyType = assContTypeMap[usermetatype].first;
     int valueType = assContTypeMap[usermetatype].second;
     for (int j = 0; j < 2; ++j) {
-        int i = j == 0 ? keyType : valueType;
+        int userType = j == 0 ? keyType : valueType;
         QString name = j == 0 ? "key" : "value";
-        if (isPrimitive(i)) {
+        if (!(isPrimitive(userType) || isPrimitiveString(userType) || isPrimitiveRaw(userType))) {
             continue;
         }
-        if (isGadget(i)) {
-            const QMetaObject * o = QMetaType::metaObjectForType(i);
+        if (isGadget(userType)) {
+            const QMetaObject * o = QMetaType::metaObjectForType(userType);
             if (o) {
                 meta_delete(*o, ops[j], table_name, name, ops.m_orm_rowid);
                 continue;
             }
         }
-        if (isPointer(i)) {
-            if (isWeakPointer(i)) {
+        if (isPointer(userType)) {
+            if (isWeakPointer(userType)) {
                 continue;
             }
-            const QMetaObject * o = QMetaType::metaObjectForType(typeToValue(i));
+            const QMetaObject * o = QMetaType::metaObjectForType(typeToValue(userType));
             if (o) {
                 meta_delete(*o, ops[j], table_name, name, ops.m_orm_rowid);
                 continue;
             }
         }
-        if (isSequentialContainer(i)) {
-            const QMetaObject * o = QMetaType::metaObjectForType(getSequentialContainerStoredType(i));
+        if (isSequentialContainer(userType)) {
+            const QMetaObject * o = QMetaType::metaObjectForType(getSequentialContainerStoredType(userType));
             if (o) {
                 QSequentialIterable si = ops[j].value<QSequentialIterable>();
                 for (QVariant v : si) {
@@ -1476,18 +1692,18 @@ void     ORM::meta_delete_pair  (int usermetatype, QVariant &v, QString const& p
                 continue;
             }
         }
-        if (isAssociativeContainer(i)) {
+        if (isAssociativeContainer(userType)) {
             QVariant qv = ops[j];
             if (qv.canConvert<ORMQVariantPair>()) {
                 qv.convert(qMetaTypeId<ORMQVariantPair>());
-                meta_delete_pair(i, qv, table_name, name, ops.m_orm_rowid);
+                meta_delete_pair(userType, qv, table_name, name, ops.m_orm_rowid);
                 continue;
             }
             if (qv.canConvert<QList<ORMQVariantPair>>()) {
                 QList<ORMQVariantPair> list = qv.value<QList<ORMQVariantPair>>();
                 for (ORMQVariantPair & v : list) {
                     QVariant vv = QVariant::fromValue(v);
-                    meta_delete_pair(i, vv, table_name, name, ops.m_orm_rowid);
+                    meta_delete_pair(userType, vv, table_name, name, ops.m_orm_rowid);
                 }
                 continue;
             }
@@ -1510,7 +1726,8 @@ void     ORM::meta_drop  (const QMetaObject &meta, QString const& parent_name, c
     QString table_name = generate_table_name(parent_name, property_name, QString(meta.className()));
     for (int i = 0; i < meta.propertyCount(); ++i) {
         QMetaProperty p = meta.property(i);
-        if (!p.isStored() || isPrimitive(p.userType())) {
+        if (!p.isStored() || isPrimitive(p.userType()) || isPrimitiveString(p.userType()) ||
+                isPrimitiveRaw(p.userType())) {
             continue;
         }
         const QMetaObject * o = nullptr;
@@ -1545,25 +1762,25 @@ void     ORM::meta_drop_pair    (int usermetatype, QString const& parent_name, Q
     int keyType = assContTypeMap[usermetatype].first;
     int valueType = assContTypeMap[usermetatype].second;
     for (int j = 0; j < 2; ++j) {
-        int i = j == 0 ? keyType : valueType;
+        int userType = j == 0 ? keyType : valueType;
         QString name = j == 0 ? "key" : "value";
-        if (isPrimitive(i)) {
+        if (!(isPrimitive(userType) || isPrimitiveString(userType) || isPrimitiveRaw(userType))) {
             continue;
         }
         const QMetaObject * o = nullptr;
-        if (isGadget(i)) {
-            o = QMetaType::metaObjectForType(i);
+        if (isGadget(userType)) {
+            o = QMetaType::metaObjectForType(userType);
         }
-        if (isPointer(i)) {
-            if (isWeakPointer(i)) {
+        if (isPointer(userType)) {
+            if (isWeakPointer(userType)) {
                 continue;
             }
-           o = QMetaType::metaObjectForType(typeToValue(i));
+           o = QMetaType::metaObjectForType(typeToValue(userType));
         }
-        if (isSequentialContainer(i)) {
-            o = QMetaType::metaObjectForType(getSequentialContainerStoredType(i));
+        if (isSequentialContainer(userType)) {
+            o = QMetaType::metaObjectForType(getSequentialContainerStoredType(userType));
         }
-        if (isAssociativeContainer(i)) {
+        if (isAssociativeContainer(userType)) {
             meta_drop_pair(usermetatype, table_name, name);
             continue;
         }

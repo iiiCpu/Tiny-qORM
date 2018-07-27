@@ -39,6 +39,7 @@ SOURCES += \
 
 HEADERS += \
     test1.h \
-    test2.h
+    test2.h \
+    test0.h
 
 FORMS +=

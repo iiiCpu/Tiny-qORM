@@ -32,6 +32,16 @@ public:
     template <typename T> static void addPrimitiveType(){ addPrimitiveType(qMetaTypeId<T>()); }
     template <typename T> static void removePrimitiveType(){ removePrimitiveType(qMetaTypeId<T>()); }
 
+    static void addPrimitiveStringType(int metaclassid);
+    static void removePrimitiveStringType(int metaclassid);
+    template <typename T> static void addPrimitiveStringType(){ addPrimitiveStringType(qMetaTypeId<T>()); }
+    template <typename T> static void removePrimitiveStringType(){ removePrimitiveStringType(qMetaTypeId<T>()); }
+
+    static void addPrimitiveRawType(int metaclassid);
+    static void removePrimitiveRawType(int metaclassid);
+    template <typename T> static void addPrimitiveRawType(){ addPrimitiveRawType(qMetaTypeId<T>()); }
+    template <typename T> static void removePrimitiveRawType(){ removePrimitiveRawType(qMetaTypeId<T>()); }
+
     static void addPointerStub(orm_pointers::ORMPointerStub const&);
 
     static void addPairType         (int firstType, int secondType, int pairType);

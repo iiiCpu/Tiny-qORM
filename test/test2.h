@@ -28,6 +28,8 @@ namespace Test2
         She m_is;
 
         bool operator !=(Mom const& no) const { return m_name != no.m_name; }
+        bool operator ==(Mom const& no) const { return m_name == no.m_name; }
+        bool operator <(Mom const& no) const { return m_name < no.m_name; }
         //Mom& operator =(Mom const& no) {  m_name = no.m_name; m_is = no.m_is; return *this; }
     };
 
@@ -37,7 +39,9 @@ namespace Test2
         Q_PROPERTY(double gas MEMBER m_gas)
     public:
         double m_gas;
-    Car& operator =(Car const& no) {  m_gas = no.m_gas; return *this; }
+        Car& operator =(Car const& no) {  m_gas = no.m_gas; return *this; }
+        bool operator ==(Car const& no) const { return m_gas == no.m_gas; }
+        bool operator <(Car const& no) const { return m_gas < no.m_gas; }
     };
 
     struct Dad : public ORMValue
@@ -74,11 +78,11 @@ namespace Test2
         Q_PROPERTY(QString name MEMBER m_name)
         Q_PROPERTY(Test2::Mom mom MEMBER m_mama)
         Q_PROPERTY(Test2::Dad dad MEMBER m_papa)
-        Q_PROPERTY(QList<Test2::Brother> bros  MEMBER m_bros )
-        Q_PROPERTY(QList<int           > draws MEMBER m_draws)
-        Q_PROPERTY(QHash<int           , int           > drows MEMBER m_drows)
-        Q_PROPERTY(QMap <int           , Test2::Brother> drops MEMBER m_drops)
-        Q_PROPERTY(QMap <Test2::Brother, Test2::Brother> drags MEMBER m_drags)
+        Q_PROPERTY(QList<Test2::Brother> bros MEMBER m_bros)
+        Q_PROPERTY(QList<int> draws MEMBER m_draws)
+        Q_PROPERTY(QHash<int,int> drows MEMBER m_drows)
+        Q_PROPERTY(QMap<int,Test2::Brother> drops MEMBER m_drops)
+        Q_PROPERTY(QMap<Test2::Brother,Test2::Brother> drags MEMBER m_drags)
     public:
         QString m_name;
         Mom m_mama;

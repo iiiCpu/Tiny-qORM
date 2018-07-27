@@ -6,27 +6,98 @@
 
 #include "orm.h"
 
+#include "test0.h"
 #include "test1.h"
 #include "test2.h"
+#include "orm_templates.h"
 
 #include <QMetaProperty>
 #include <QDataStream>
 
 
-QDebug operator<<(QDebug dbg, Test1::U const& ur)
+
+QDebug operator<<(QDebug dbg, QStructures const& t) { return orm_toDebug(dbg, t); }
+
+void test0()
 {
-    QDebugStateSaver saver(dbg);
-    dbg.nospace() << "U(m_i=" << ur.m_i << ")";
-    return dbg;
+    registerTypeORM<QStructures>();
+    ORM::addPrimitiveRawType<QRect>();
+
+    QStructures s;
+
+    s.m_QChar                 = QChar                     ('y');
+    s.m_QString               = QString                   ("Yo, nigga!");
+    s.m_QStringList           = QStringList               (s.m_QString.split(' '));
+    s.m_QByteArray            = QByteArray                (s.m_QString.toLatin1());
+    s.m_QBitArray             = QBitArray                 (25);
+    s.m_QDate                 = QDate                     (QDate::currentDate().addDays(-8));
+    s.m_QTime                 = QTime                     (QTime::currentTime().addSecs(33333));
+    s.m_QDateTime             = QDateTime                 (QDateTime::currentDateTimeUtc());
+    s.m_QUrl                  = QUrl                      ("https://github.com");
+    s.m_QLocale               = QLocale                   (QLocale::Arabic, QLocale::Egypt);
+    s.m_QRect                 = QRect                     (0, 0, 640, 480);
+    s.m_QRectF                = QRectF                    (-320.5, -319.5, 319.5, 320.5);
+    s.m_QSize                 = QSize                     (400, 300);
+    s.m_QSizeF                = QSizeF                    (4096.5, 4095.6);
+    s.m_QLine                 = QLine                     (100, 100, 200, 200);
+    s.m_QLineF                = QLineF                    (1.2, 3.4, 5.6, 7.8);
+    s.m_QPoint                = QPoint                    (0, 9);
+    s.m_QPointF               = QPointF                   (3.14, 3.15);
+    s.m_QRegExp               = QRegExp                   ("(0x[a-fA-F0-9]+)");
+    s.m_QEasingCurve          = QEasingCurve              ();
+    s.m_QUuid                 = QUuid                     (QUuid::createUuid());
+    s.m_QModelIndex           = QModelIndex               ();
+    s.m_QRegularExpression    = QRegularExpression        ("(0x[a-fA-F0-9]+)");
+    s.m_QJsonValue            = QJsonValue                (23);
+    s.m_QJsonObject           = QJsonObject               ();
+    s.m_QJsonArray            = QJsonArray                ();
+    s.m_QJsonDocument         = QJsonDocument             ();
+    s.m_QPersistentModelIndex = QPersistentModelIndex     ();
+    s.m_QByteArrayList        = QByteArrayList            ();
+    s.m_QFont                 = QFont                     ("Courier", 3, 24);
+    s.m_QPixmap               = QPixmap                   (400, 300);
+    s.m_QBrush                = QBrush                    (QColor(Qt::yellow));
+    s.m_QColor                = QColor                    (33, 48, 188);
+    s.m_QPalette              = QPalette                  (QColor(Qt::black), QColor(Qt::lightGray), QColor(Qt::white), QColor(Qt::darkBlue), QColor(Qt::blue), QColor(Qt::red), QColor(Qt::cyan));
+    s.m_QIcon                 = QIcon                     (s.m_QPixmap);
+    s.m_QImage                = QImage                    (320, 240, QImage::Format_ARGB32);
+    s.m_QPolygon              = QPolygon                  (s.m_QRect);
+    s.m_QRegion               = QRegion                   (s.m_QRect);
+    s.m_QBitmap               = QBitmap                   (s.m_QPixmap);
+    s.m_QCursor               = QCursor                   (Qt::ArrowCursor);
+    s.m_QKeySequence          = QKeySequence              (QKeySequence::Print);
+    s.m_QPen                  = QPen                      (Qt::green, 3, Qt::DashDotLine, Qt::RoundCap, Qt::RoundJoin);
+    s.m_QTextLength           = QTextLength               ();
+    s.m_QTextFormat           = QTextFormat               (QTextFormat::BlockFormat);
+    s.m_QMatrix               = QMatrix                   (1, 0, 0, 1, 1, 1);
+    s.m_QTransform            = QTransform                (0, 0, 1, 0, 1, 0, 1, 0, 0);
+    s.m_QMatrix4x4            = QMatrix4x4                (1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1);
+    s.m_QVector2D             = QVector2D                 (6.4, 6.4);
+    s.m_QVector3D             = QVector3D                 (1.3, 2.4, 3.5);
+    s.m_QVector4D             = QVector4D                 (1.4, 2.5, 3.6, 4.7);
+    s.m_QQuaternion           = QQuaternion               (0.5, 7, 7, 7);
+    s.m_QPolygonF             = QPolygonF                 (s.m_QPolygon);
+    s.m_QSizePolicy           = QSizePolicy               (QSizePolicy::Expanding, QSizePolicy::Expanding);
+    qDebug() << s;
+
+    ORM orm;
+    orm.drop<QStructures>();
+    orm.create<QStructures>();
+    orm.insert(s);
+    QList<QStructures> mine = orm.select<QStructures>();
+    qDebug() << mine;
 }
 
-bool operator!=(Test1::U const& u1, Test1::U const& u2) {
-    return u1.m_i != u2.m_i;
-}
+
+QDebug operator<<(QDebug dbg, Test1::U const& ur) { return orm_toDebug(dbg, ur); }
+bool operator!=(Test1::U const& u1, Test1::U const& u2) { return orm_nequal(u1, u2); }
+bool operator==(Test1::U const& u1, Test1::U const& u2) { return orm_equal(u1, u2); }
+bool operator< (Test1::U const& u1, Test1::U const& u2) { return orm_less(u1, u2); }
 
 void test1()
 {
     qRegisterMetaType<Test1::U>("Test1::U");
+    QMetaType::registerComparators<Test1::U>();
 
     QList<Test1::U> urs { Test1::U(1), Test1::U(3), Test1::U(7), Test1::U(5) };
 
@@ -60,53 +131,19 @@ void test1()
     qDebug() << "Test1: passed";
 }
 
+QDebug operator<<(QDebug dbg, Test2::Ur const& ur) { return orm_toDebug(dbg, ur); }
+QDebug operator<<(QDebug dbg, Test2::Dad const& ur) { return orm_toDebug(dbg, ur); }
+QDebug operator<<(QDebug dbg, Test2::Mom const& ur) { return orm_toDebug(dbg, ur); }
+QDebug operator<<(QDebug dbg, Test2::Car const& ur) { return orm_toDebug(dbg, ur); }
+QDebug operator<<(QDebug dbg, Test2::Brother const& ur) { return orm_toDebug(dbg, ur); }
 
-QDebug operator<<(QDebug dbg, const Test2::Mom &mom)
-{
-    QDebugStateSaver saver(dbg);
-    dbg.nospace() << "Mom(" << &mom << ", name=" << mom.m_name << ", is=" << mom.m_is << ")";
-    return dbg;
-}
-QDebug operator<<(QDebug dbg, const Test2::Car &car)
-{
-    QDebugStateSaver saver(dbg);
-    dbg.nospace() << "Car(" << &car << ", gas=" << car.m_gas << ")";
-    return dbg;
-}
-QDebug operator<<(QDebug dbg, const Test2::Dad &dad)
-{
-    QDebugStateSaver saver(dbg);
-    if (dad.m_car)
-        dbg.nospace() << "Dad(" << &dad << ", rowid=" << dad.m_orm_rowid
-                      << ", name=" << dad.m_name << ", car=" << *dad.m_car << ")";
-    else
-        dbg.nospace() << "Dad(" << &dad << ", rowid=" << dad.m_orm_rowid
-                      << ", name=" << dad.m_name << ", car={null})";
-    return dbg;
-}
-QDebug operator<<(QDebug dbg, const Test2::Brother &bro)
-{
-    QDebugStateSaver saver(dbg);
-    dbg.nospace() << "Brother(" << &bro << ", name=" << bro.m_name << ", lastCombo=" << bro.m_lastCombo
-                  << ", totalPunches=" << bro.m_totalPunches << ")";
-    return dbg;
-}
-QDebug operator<<(QDebug dbg, const Test2::Ur &ur)
-{
-    QDebugStateSaver saver(dbg);
-    dbg.nospace() << "Ur(" << &ur << ", name=" << ur.m_name << ", mom=" << ur.m_mama
-                  << ", dad=" << ur.m_papa << ", bros=" << ur.m_bros << ", draws=" << ur.m_draws << ur.m_drows << ur.m_drops << ur.m_drags << ")";
-    return dbg;
-}
-
-Q_DECLARE_METATYPE(QFile*)
 
 void test2()
 {
-    registerTypeORM<Test2::Ur>();
-    registerTypeORM<Test2::Dad>();
-    registerTypeORM<Test2::Mom>();
-    registerTypeORM<Test2::Car>();
+    registerTypeORM<Test2::Ur     >();
+    registerTypeORM<Test2::Dad    >();
+    registerTypeORM<Test2::Mom    >();
+    registerTypeORM<Test2::Car    >();
     registerTypeORM<Test2::Brother>();
     orm_containers::registerTypeSequentialContainers<int>();
     orm_containers::registerHashAssociativeContainers<int,int>();
@@ -134,6 +171,8 @@ void test2()
     ur1.m_drops[3]=b12;
     ur1.m_drags[b12]=b12;
 
+    //qDebug() << toString(ur1);
+
     Test2::Ur ur2;
     ur2.m_name = "Bob";
     ur2.m_draws << 1 << 2 << 3 << 99999;
@@ -159,7 +198,7 @@ void test2()
     QList<Test2::Ur> mine = orm.select<Test2::Ur>();
     orm.update(mine[1]);
     mine = orm.select<Test2::Ur>();
-    qDebug() << mine;
+    //qDebug() << mine;
 
     if (mine.size() != 2) {
         qDebug() << "Test2: Size error";
@@ -167,6 +206,8 @@ void test2()
     }
     if (mine[0] != ur1) {
         qDebug() << "Test2: value 1 error";
+        qDebug() << mine[0];
+        qDebug() << ur1;
         return;
     }
     if (mine[1] != ur2) {
@@ -199,22 +240,24 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
 
 
-
+    test0();
     test1();
     test2();
 
 
-    for (int i = 0; i < 0x00100000; ++i) {
-        const QMetaObject * o = QMetaType::metaObjectForType(i);
-        if (o) {
-            qDebug() << i << o->className() << QMetaType::typeName(i);
-            for (int j = 0; j <  o->propertyCount(); ++j) {
-                qDebug() << "  " << o->property(j).userType() << QMetaType::typeName(o->property(j).userType()) << o->property(j).name();
+    if (false) {
+        for (int i = 0; i < 0x00100000; ++i) {
+            const QMetaObject * o = QMetaType::metaObjectForType(i);
+            if (o) {
+                qDebug() << i << o->className() << QMetaType::typeName(i);
+                for (int j = 0; j <  o->propertyCount(); ++j) {
+                    qDebug() << "  " << o->property(j).userType() << QMetaType::typeName(o->property(j).userType()) << o->property(j).name();
+                }
             }
-        }
-        else {
-            if (QMetaType::typeName(i)) {
-                qDebug() << i << QMetaType::typeName(i);
+            else {
+                if (QMetaType::typeName(i)) {
+                    qDebug() << i << QMetaType::typeName(i);
+                }
             }
         }
     }

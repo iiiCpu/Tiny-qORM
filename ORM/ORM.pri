@@ -16,4 +16,5 @@ SOURCES += \
 
 HEADERS +=     \
            $$PWD/orm_def.h \
-    $$PWD/orm.h
+    $$PWD/orm.h \
+    $$PWD/orm_templates.h

@@ -6,7 +6,7 @@
 #define ORM_DEF_H
 
 #include <QMetaObject>
-
+#include <QDebug>
 #include <memory>
 #include <QSharedPointer>
 #include <QWeakPointer>
@@ -33,5 +33,8 @@ public:
     virtual ~ORMValue(){}
 };
 ORM_DECLARE_METATYPE(ORMValue)
+
+
+
 
 #endif // ORM_DEF_H
