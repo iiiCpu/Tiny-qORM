@@ -82,6 +82,7 @@ namespace Test2
         Q_PROPERTY(QList<int> draws MEMBER m_draws)
         Q_PROPERTY(QHash<int,int> drows MEMBER m_drows)
         Q_PROPERTY(QMap<int,Test2::Brother> drops MEMBER m_drops)
+        Q_PROPERTY(QPair<int,Test2::Brother> drop MEMBER m_drop)
         Q_PROPERTY(QMap<Test2::Brother,Test2::Brother> drags MEMBER m_drags)
     public:
         QString m_name;
@@ -91,14 +92,15 @@ namespace Test2
         QList<int> m_draws;
         QHash<int,int> m_drows;
         QMap<int,Brother> m_drops;
+        QPair<int,Brother> m_drop;
         QMap<Brother,Brother> m_drags;
         bool operator !=(Ur const& no) const { return m_name != no.m_name || m_mama != no.m_mama ||
                     m_papa != no.m_papa || m_bros != no.m_bros || m_draws != no.m_draws ||
-                    m_drows != no.m_drows || m_drops != no.m_drops || m_drags != no.m_drags; }
+                    m_drows != no.m_drows || m_drops != no.m_drops || m_drop != no.m_drop || m_drags != no.m_drags; }
         Ur& operator =(Ur const& no) {  m_name = no.m_name; m_mama = no.m_mama;
                                         m_papa = no.m_papa; m_bros = no.m_bros;
                                         m_draws = no.m_draws; m_drows = no.m_drows;
-                                        m_drops = no.m_drops; m_drags = no.m_drags;
+                                        m_drops = no.m_drops; m_drop = no.m_drop; m_drags = no.m_drags;
                                         return *this; }
     };
 }

@@ -27,7 +27,7 @@ QDebug orm_toDebugObj(QDebug dbg, T const& tt)
 }
 
 template <typename T>
-QString toString(T const& tt)
+QString orm_toString(T const& tt)
 {
     T const* t = &tt;
     QString str;
@@ -51,7 +51,7 @@ QString toString(T const& tt)
     return str;
 }
 template <typename T>
-QString toStringP(T const* t)
+QString orm_toStringP(T const* t)
 {
     if (!t) {
         return "{null}";
@@ -79,7 +79,7 @@ QString toStringP(T const* t)
 template <typename T>
 QDebug orm_toDebug(QDebug dbg, T const& tt)
 {
-    dbg.nospace() << toString(tt);
+    dbg.nospace() << orm_toString(tt);
     return dbg;
 }
 

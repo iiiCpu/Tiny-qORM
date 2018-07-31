@@ -20,8 +20,8 @@ QDebug operator<<(QDebug dbg, QStructures const& t) { return orm_toDebug(dbg, t)
 
 void test0()
 {
-    registerTypeORM<QStructures>();
-    ORM::addPrimitiveRawType<QRect>();
+    ormRegisterType<QStructures>();
+    ORM_Config::addPrimitiveRawType<QRect>();
 
     QStructures s;
 
@@ -72,9 +72,9 @@ void test0()
     s.m_QMatrix               = QMatrix                   (1, 0, 0, 1, 1, 1);
     s.m_QTransform            = QTransform                (0, 0, 1, 0, 1, 0, 1, 0, 0);
     s.m_QMatrix4x4            = QMatrix4x4                (1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1);
-    s.m_QVector2D             = QVector2D                 (6.4, 6.4);
-    s.m_QVector3D             = QVector3D                 (1.3, 2.4, 3.5);
-    s.m_QVector4D             = QVector4D                 (1.4, 2.5, 3.6, 4.7);
+    s.m_QVector2D             = QVector2D                 (6.4f, 6.4f);
+    s.m_QVector3D             = QVector3D                 (1.3f, 2.4f, 3.5f);
+    s.m_QVector4D             = QVector4D                 (1.4f, 2.5f, 3.6f, 4.7f);
     s.m_QQuaternion           = QQuaternion               (0.5, 7, 7, 7);
     s.m_QPolygonF             = QPolygonF                 (s.m_QPolygon);
     s.m_QSizePolicy           = QSizePolicy               (QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -131,20 +131,26 @@ void test1()
     qDebug() << "Test1: passed";
 }
 
-QDebug operator<<(QDebug dbg, Test2::Ur const& ur) { return orm_toDebug(dbg, ur); }
 QDebug operator<<(QDebug dbg, Test2::Dad const& ur) { return orm_toDebug(dbg, ur); }
 QDebug operator<<(QDebug dbg, Test2::Mom const& ur) { return orm_toDebug(dbg, ur); }
 QDebug operator<<(QDebug dbg, Test2::Car const& ur) { return orm_toDebug(dbg, ur); }
 QDebug operator<<(QDebug dbg, Test2::Brother const& ur) { return orm_toDebug(dbg, ur); }
 
+QDebug& operator<<(QDebug& dbg, Test2::Ur const& no) {
+    QDebugStateSaver s(dbg);
+    dbg.nospace() << no.m_name << no.m_mama << no.m_papa
+                  << no.m_bros << no.m_draws << no.m_drows
+                  << no.m_drops << no.m_drop << no.m_drags;
+    return dbg;
+}
 
 void test2()
 {
-    registerTypeORM<Test2::Ur     >();
-    registerTypeORM<Test2::Dad    >();
-    registerTypeORM<Test2::Mom    >();
-    registerTypeORM<Test2::Car    >();
-    registerTypeORM<Test2::Brother>();
+    ormRegisterType<Test2::Ur     >();
+    ormRegisterType<Test2::Dad    >();
+    ormRegisterType<Test2::Mom    >();
+    ormRegisterType<Test2::Car    >();
+    ormRegisterType<Test2::Brother>();
     orm_containers::registerTypeSequentialContainers<int>();
     orm_containers::registerHashAssociativeContainers<int,int>();
     orm_containers::registerOrderedAssociativeContainers<int,Test2::Brother>();
@@ -169,6 +175,8 @@ void test2()
     ur1.m_papa.m_car->m_gas = 3.14;
     ur1.m_drows[3]=14;
     ur1.m_drops[3]=b12;
+    ur1.m_drop.first = 3;
+    ur1.m_drop.second = b12;
     ur1.m_drags[b12]=b12;
 
     //qDebug() << toString(ur1);
@@ -260,7 +268,9 @@ int main(int argc, char *argv[])
                 }
             }
         }
+        qDebug() << ORM_Config();
     }
+
 
     return 0;
 }
