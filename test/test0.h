@@ -4,6 +4,10 @@
 #include <QMetaType>
 #include "orm_def.h"
 
+class QDebug;
+
+void test0();
+
 #include <QChar>
 #include <QString>
 #include <QStringList>
@@ -58,7 +62,7 @@
 #include <QPolygonF>
 #include <QSizePolicy>
 
-struct QStructures : public ORMValue
+struct Test_QtStructures : public ORMValue
 {
     Q_GADGET
     Q_PROPERTY(QChar                     m_QChar                 MEMBER m_QChar                 )
@@ -95,7 +99,7 @@ struct QStructures : public ORMValue
     Q_PROPERTY(QBrush                    m_QBrush                MEMBER m_QBrush                )
     Q_PROPERTY(QColor                    m_QColor                MEMBER m_QColor                )
     Q_PROPERTY(QPalette                  m_QPalette              MEMBER m_QPalette              )
-    //Q_PROPERTY(QIcon                     m_QIcon                 MEMBER m_QIcon                 )
+  //Q_PROPERTY(QIcon                     m_QIcon                 MEMBER m_QIcon                 )
     Q_PROPERTY(QImage                    m_QImage                MEMBER m_QImage                )
     Q_PROPERTY(QPolygon                  m_QPolygon              MEMBER m_QPolygon              )
     Q_PROPERTY(QRegion                   m_QRegion               MEMBER m_QRegion               )
@@ -168,7 +172,16 @@ public:
     QQuaternion               m_QQuaternion           ;
     QPolygonF                 m_QPolygonF             ;
     QSizePolicy               m_QSizePolicy           ;
+public:
+    Test_QtStructures();
+    Test_QtStructures(Test_QtStructures const& o);
+
+    bool operator !=(Test_QtStructures const& o) const;
+    bool operator ==(Test_QtStructures const& o) const;
+    Test_QtStructures& operator =(Test_QtStructures const& o);
 };
-ORM_DECLARE_METATYPE(QStructures)
+ORM_DECLARE_METATYPE(Test_QtStructures)
+
+QDebug& operator<<(QDebug& dbg, Test_QtStructures const& t);
 
 #endif // TEST0_H

@@ -16,13 +16,15 @@
     Q_DECLARE_METATYPE(                 Type   )\
     Q_DECLARE_METATYPE(                 Type * )
 
-#define ORM_DECLARE_METATYPE_EX(Type)           \
-    Q_DECLARE_METATYPE(                 Type   )\
-    Q_DECLARE_METATYPE(                 Type * )\
+#define ORM_DECLARE_METATYPE_SMARTPOINTERS(Type)\
     Q_DECLARE_METATYPE(QSharedPointer < Type > )\
     Q_DECLARE_METATYPE(QWeakPointer   < Type > )\
     Q_DECLARE_METATYPE(std::shared_ptr< Type > )\
     Q_DECLARE_METATYPE(std::weak_ptr  < Type > )
+
+#define ORM_DECLARE_METATYPE_EX(Type)           \
+    ORM_DECLARE_METATYPE              (Type)    \
+    ORM_DECLARE_METATYPE_SMARTPOINTERS(Type)
 
 
 struct ORMValue {

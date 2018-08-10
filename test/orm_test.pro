@@ -35,11 +35,19 @@ PRE_TARGETDEPS += "C:/Program Files (x86)/Visual Leak Detector/lib/Win32/vld.lib
 
 
 SOURCES += \
-        main.cpp
+        main.cpp \
+    test0.cpp \
+    test1.cpp \
+    test3.cpp \
+    test2.cpp
 
 HEADERS += \
     test1.h \
     test2.h \
-    test0.h
+    test0.h \
+    test0.h \
+    test1.h \
+    test3.h \
+    test2.h
 
 FORMS +=

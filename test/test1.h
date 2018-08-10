@@ -2,11 +2,12 @@
 #define TEST1_H
 
 #include <QMetaType>
-#include "orm_def.h"
+class QDebug;
+
+void test1();
 
 namespace Test1
 {
-
     struct U
     {
         Q_GADGET
@@ -17,5 +18,11 @@ namespace Test1
     };
 }
 Q_DECLARE_METATYPE(Test1::U)
+
+QDebug& operator<<(QDebug & dbg, Test1::U const& ur);
+bool operator!=(Test1::U const& u1, Test1::U const& u2);
+bool operator==(Test1::U const& u1, Test1::U const& u2);
+bool operator< (Test1::U const& u1, Test1::U const& u2);
+
 
 #endif // TEST1_H
