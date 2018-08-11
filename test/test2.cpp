@@ -3,39 +3,80 @@
 #include <QDebug>
 #include "orm.h"
 
+#define debug_output false
+
+Test2::Mom::Mom()
+{
+    m_is = Nice;
+    if (debug_output) qDebug() << "Mom()" << this;
+}
+Test2::Mom::Mom(const Test2::Mom &no)
+{
+    if (debug_output) qDebug() << "Mom(Mom)" << this << &no;
+    m_name = no.m_name;
+    m_is = no.m_is;
+}
+Test2::Mom::~Mom()
+{
+    if (debug_output)
+        qDebug() << "~Mom()" << this;
+}
 bool Test2::Mom::operator !=(const Test2::Mom &no) const
 {
-    return m_name != no.m_name;
+    bool ref = false;
+    if (m_name != no.m_name) { if (debug_output) qDebug() << m_name << no.m_name; ref = true; }
+    if (m_is   != no.m_is  ) { if (debug_output) qDebug() << m_is   << no.m_is  ; ref = true; }
+    return ref;
 }
 bool Test2::Mom::operator ==(const Test2::Mom &no) const
 {
-    return m_name == no.m_name;
+    bool ref = true;
+    if (m_name != no.m_name) { if (debug_output) qDebug() << m_name << no.m_name; ref = false; }
+    if (m_is   != no.m_is  ) { if (debug_output) qDebug() << m_is   << no.m_is  ; ref = false; }
+    return ref;
 }
 bool Test2::Mom::operator <(const Test2::Mom &no) const
 {
     return m_name < no.m_name;
 }
-
 Test2::Mom &Test2::Mom::operator =(const Test2::Mom &no)
 {
     m_name = no.m_name;
     m_is = no.m_is;
+    if (debug_output) qDebug() << "Mom=" << this << &no;
     return *this;
 }
 
 
-Test2::Car::Car(){ qDebug() << "Car" << this; }
-
-Test2::Car::~Car(){ qDebug() << "~Car" << this; }
-
+Test2::Car::Car()
+{
+    if (debug_output) qDebug() << "Car()" << this;
+}
+Test2::Car::Car(const Test2::Car &no)
+{
+    if (debug_output) qDebug() << "Car(Car)" << this << &no;
+}
+Test2::Car::~Car()
+{
+    if (debug_output) qDebug() << "~Car()" << this;
+}
 Test2::Car &Test2::Car::operator =(const Test2::Car &no)
 {
     m_gas = no.m_gas;
+    if (debug_output) qDebug() << "Car=" << this << &no;
     return *this;
+}
+bool Test2::Car::operator !=(const Test2::Car &no) const
+{
+    bool ref = false;
+    if (m_gas != no.m_gas) { if (debug_output) qDebug() << m_gas << no.m_gas; ref = true; }
+    return ref;
 }
 bool Test2::Car::operator ==(const Test2::Car &no) const
 {
-    return m_gas == no.m_gas;
+    bool ref = true;
+    if (m_gas != no.m_gas) { if (debug_output) qDebug() << m_gas << no.m_gas; ref = false; }
+    return ref;
 }
 bool Test2::Car::operator <(const Test2::Car &no) const
 {
@@ -45,10 +86,9 @@ bool Test2::Car::operator <(const Test2::Car &no) const
 
 Test2::Dad::Dad()
 {
-    qDebug() << "Dad()" << this;
+    if (debug_output) qDebug() << "Dad()" << this;
     m_car  = nullptr;
 }
-
 Test2::Dad::Dad(const Test2::Dad &no)
 {
     m_car = nullptr;
@@ -57,26 +97,43 @@ Test2::Dad::Dad(const Test2::Dad &no)
         m_car = new Test2::Car();
         *m_car = *no.m_car;
     }
-    qDebug() << "Dad()" << this << no << m_car << no.m_car;
+    if (debug_output) qDebug() << "Dad(Dad)" << this << &no << m_car << no.m_car;
 }
-
 Test2::Dad::~Dad()
 {
+    if (debug_output) qDebug() << "~Dad()" << this << m_car;
     if (m_car) {
-        qDebug() << "~Dad" << this << m_car;
         delete m_car;
         m_car = nullptr;
     }
 }
-
 bool Test2::Dad::operator !=(const Test2::Dad &no) const
 {
-    return m_name != no.m_name;
+    bool ref = false;
+    if (m_name != no.m_name) { if (debug_output) qDebug() << m_name << no.m_name; ref = true; }
+    if (m_car && no.m_car) {
+        if (*m_car  != *no.m_car ) { if (debug_output) qDebug() << *m_car  << *no.m_car ; ref = true; }
+    }
+    else {
+        if (m_car  != no.m_car ) { if (debug_output) qDebug() << m_car  << no.m_car ; ref = true; }
+    }
+    return ref;
 }
-
+bool Test2::Dad::operator ==(const Test2::Dad &no) const
+{
+    bool ref = true;
+    if (m_name != no.m_name) { if (debug_output) qDebug() << m_name << no.m_name; ref = false; }
+    if (m_car && no.m_car) {
+        if (*m_car  != *no.m_car ) { if (debug_output) qDebug() << *m_car  << *no.m_car ; ref = false; }
+    }
+    else {
+        if (m_car  != no.m_car ) { if (debug_output) qDebug() << m_car  << no.m_car ; ref = false; }
+    }
+    return ref;
+}
 Test2::Dad &Test2::Dad::operator =(const Test2::Dad &no)
 {
-    qDebug() << "Dad=" << this << no << m_car << no.m_car;
+    if (debug_output) qDebug() << "Dad=" << this << &no << m_car << no.m_car;
     m_name = no.m_name;
     if (m_car) {
         if (no.m_car) {
@@ -93,18 +150,41 @@ Test2::Dad &Test2::Dad::operator =(const Test2::Dad &no)
             *m_car = *no.m_car;
         }
     }
-    qDebug() << "=Dad" << this << no << m_car << no.m_car;
+    if (debug_output) qDebug() << "=Dad" << this << &no << m_car << no.m_car;
     return *this;
 }
 
 
+Test2::Brother::Brother()
+{
+    if (debug_output) qDebug() << "Brother()" << this;
+}
+Test2::Brother::Brother(const Test2::Brother &no)
+{
+    m_name         = no.m_name        ;
+    m_lastCombo    = no.m_lastCombo   ;
+    m_totalPunches = no.m_totalPunches;
+    if (debug_output) qDebug() << "Brother(Brother)" << this << &no;
+}
+Test2::Brother::~Brother()
+{
+    if (debug_output) qDebug() << "~Brother()" << this;
+}
 bool Test2::Brother::operator !=(const Test2::Brother &no) const
 {
-    return m_name != no.m_name;
+    bool ref = false;
+    if (m_name         != no.m_name        ) { if (debug_output) qDebug() << m_name         << no.m_name        ; ref = true; }
+    if (m_lastCombo    != no.m_lastCombo   ) { if (debug_output) qDebug() << m_lastCombo    << no.m_lastCombo   ; ref = true; }
+    if (m_totalPunches != no.m_totalPunches) { if (debug_output) qDebug() << m_totalPunches << no.m_totalPunches; ref = true; }
+    return ref;
 }
 bool Test2::Brother::operator ==(const Test2::Brother &no) const
 {
-    return m_name == no.m_name;
+    bool ref = true;
+    if (m_name         != no.m_name        ) { if (debug_output) qDebug() << m_name         << no.m_name        ; ref = false; }
+    if (m_lastCombo    != no.m_lastCombo   ) { if (debug_output) qDebug() << m_lastCombo    << no.m_lastCombo   ; ref = false; }
+    if (m_totalPunches != no.m_totalPunches) { if (debug_output) qDebug() << m_totalPunches << no.m_totalPunches; ref = false; }
+    return ref;
 }
 bool Test2::Brother::operator <(const Test2::Brother &no) const
 {
@@ -115,25 +195,53 @@ Test2::Brother &Test2::Brother::operator =(const Test2::Brother &no)
     m_name         = no.m_name        ;
     m_lastCombo    = no.m_lastCombo   ;
     m_totalPunches = no.m_totalPunches;
+    if (debug_output) qDebug() << "Brother=" << this << &no;
     return *this;
 }
 
 
+Test2::Ur::Ur()
+{
+    if (debug_output) qDebug() << "Ur()" << this;
+}
+Test2::Ur::Ur(const Test2::Ur &no)
+{
+    m_name  = no.m_name ;
+    m_mama  = no.m_mama ;
+    m_papa  = no.m_papa ;
+    m_bros  = no.m_bros ;
+    if (debug_output) qDebug() << "Ur(Ur)" << this << &no;
+}
+Test2::Ur::~Ur()
+{
+    if (debug_output) qDebug() << "~Ur()" << this;
+}
 bool Test2::Ur::operator !=(const Test2::Ur &no) const
-  {
-    return  m_name  != no.m_name  ||
-            m_mama  != no.m_mama  ||
-            m_papa  != no.m_papa  ||
-            m_bros  != no.m_bros  ||
-            false;
+{
+    bool ref = false;
+    if (m_name != no.m_name) { if (debug_output) qDebug() << m_name << no.m_name; ref = true; }
+    if (m_mama != no.m_mama) { if (debug_output) qDebug() << m_mama << no.m_mama; ref = true; }
+    if (m_papa != no.m_papa) { if (debug_output) qDebug() << m_papa << no.m_papa; ref = true; }
+    if (m_bros != no.m_bros) { if (debug_output) qDebug() << m_bros << no.m_bros; ref = true; }
+    return ref;
 }
 
+bool Test2::Ur::operator ==(const Test2::Ur &no) const
+{
+    bool ref = true;
+    if (m_name != no.m_name) { if (debug_output) qDebug() << m_name << no.m_name; ref = false; }
+    if (m_mama != no.m_mama) { if (debug_output) qDebug() << m_mama << no.m_mama; ref = false; }
+    if (m_papa != no.m_papa) { if (debug_output) qDebug() << m_papa << no.m_papa; ref = false; }
+    if (m_bros != no.m_bros) { if (debug_output) qDebug() << m_bros << no.m_bros; ref = false; }
+    return ref;
+}
 Test2::Ur &Test2::Ur::operator =(const Test2::Ur &no)
 {
     m_name  = no.m_name ;
     m_mama  = no.m_mama ;
     m_papa  = no.m_papa ;
     m_bros  = no.m_bros ;
+    if (debug_output) qDebug() << "Ur=" << this << &no;
     return *this;
 }
 
@@ -141,8 +249,9 @@ Test2::Ur &Test2::Ur::operator =(const Test2::Ur &no)
 
 QDebug &operator<<(QDebug &dbg, const Test2::Dad &ur)
 {
-    if (ur.m_car)
+    if (ur.m_car) {
         return dbg << "Dad(name=" << ur.m_name << ", car=" << *ur.m_car << ")";
+    }
     return dbg << "Dad(name=" << ur.m_name << ", car=nullptr)";
 }
 
@@ -163,10 +272,11 @@ QDebug &operator<<(QDebug &dbg, const Test2::Brother &ur)
 
 QDebug &operator<<(QDebug &dbg, const Test2::Ur &no)
 {
-    return dbg << "Ur(name=" << no.m_name
-               << ", mama="  << no.m_mama
-               << ", papa="  << no.m_papa
-               << ", bros="  << no.m_bros
+    return dbg << "Ur("
+               <<   "name=" << no.m_name
+               << ", mama=" << no.m_mama
+               << ", papa=" << no.m_papa
+               << ", bros=" << no.m_bros
                << ")";
 }
 
@@ -214,22 +324,13 @@ void test2()
     ORM orm;
     orm.drop<Test2::Ur>();
     orm.create<Test2::Ur>();
-    qDebug() << "insert1";
     orm.insert(ur1);
-    qDebug() << "insert2";
     orm.insert(ur2);
-    qDebug() << "update1";
     orm.update(ur2);
-    qDebug() << "select1";
     QList<Test2::Ur> mine = orm.select<Test2::Ur>();
-    qDebug() << "update2";
     orm.update(mine[1]);
-    qDebug() << "select2";
     mine = orm.select<Test2::Ur>();
     qDebug() << mine;
-    for (auto i : mine) {
-        qDebug() << i.m_name << i.m_papa.m_car;
-    }
 
     if (mine.size() != 2) {
         qDebug() << "Test2: Size error";

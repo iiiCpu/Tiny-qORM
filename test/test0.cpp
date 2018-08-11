@@ -301,8 +301,9 @@ QDebug& operator<<(QDebug& dbg, const Test_QtStructures &t)
 
 
 
-void test0()
+void test_QtStructures()
 {
+    qDebug() << "Qt structures serialization test:";
     ormRegisterType<Test_QtStructures>();
     ORM_Config::addPrimitiveRawType<QRect>();
 
@@ -370,4 +371,5 @@ void test0()
     QList<Test_QtStructures> mine = orm.select<Test_QtStructures>();
     qDebug() << mine;
     qDebug() << (s == mine.first());
+    qDebug() << "End of test.";
 }

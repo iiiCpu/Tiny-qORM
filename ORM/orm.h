@@ -298,7 +298,6 @@ void ORM::drop() {
 }
 
 
-
 namespace orm_pointers
 {
     template <typename T> ORMPointerStub registerTypePointers();
@@ -717,7 +716,6 @@ template <typename T> int ormRegisterType(const char * c)
             type = qRegisterMetaType<T>();
         }
     }
-
     ORM_Config::addPointerStub(orm_pointers::registerTypePointers<T>());
     orm_containers::registerSequentialContainers<T>();
     return type;

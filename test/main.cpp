@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
 
 
-    //test0();
+    test_QtStructures();
     test1();
     test2();
     test3();

@@ -29,6 +29,9 @@ namespace Test2
         She     m_is  ;
 
     public:
+        Mom ();
+        Mom (Mom const& no);
+        ~Mom ();
         bool operator !=(Mom const& no) const;
         bool operator ==(Mom const& no) const;
         bool operator < (Mom const& no) const;
@@ -44,8 +47,10 @@ namespace Test2
 
     public:
         Car ();
+        Car (Car const& no);
         ~Car();
         Car& operator = (Car const& no)      ;
+        bool operator !=(Car const& no) const;
         bool operator ==(Car const& no) const;
         bool operator < (Car const& no) const;
     };
@@ -56,14 +61,15 @@ namespace Test2
         Q_PROPERTY(QString      name MEMBER m_name)
         Q_PROPERTY(Test2::Car * car  MEMBER m_car )
     public:
-        QString m_name          ;
-        Car *   m_car; // lost somewhere
+        QString m_name;
+        Car *   m_car ; // lost somewhere
 
     public:
         Dad ();
         Dad (Dad const& no);
         ~Dad();
         bool operator !=(Dad const& no) const;
+        bool operator ==(Dad const& no) const;
         Dad& operator = (Dad const& no)      ;
     };
 
@@ -79,6 +85,9 @@ namespace Test2
         int     m_totalPunches;
 
     public:
+        Brother ();
+        Brother (Brother const& no);
+        ~Brother();
         bool     operator !=(Brother const& no) const;
         bool     operator ==(Brother const& no) const;
         bool     operator < (Brother const& no) const;
@@ -99,7 +108,11 @@ namespace Test2
         QList<Brother> m_bros;
 
     public:
+        Ur ();
+        Ur (Ur const& no);
+        ~Ur();
         bool operator !=(Ur const& no) const;
+        bool operator ==(Ur const& no) const;
         Ur&  operator = (Ur const& no)      ;
     };
 }

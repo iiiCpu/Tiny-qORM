@@ -1086,15 +1086,12 @@ QVariant ORM::meta_select(const QMetaObject &meta, QString const& parent_name,
                         }
                         const QMetaObject * metaObject = QMetaType::metaObjectForType(ORM_Impl::pointerToValue(property.userType()));
                         if (metaObject) {
-                            qDebug() << "beforeWrite" << property.name();
                             QVariantList variantList = meta_select(*metaObject, tableName, QString(property.name()), orm_rowid).toList();
                             if (variantList.size()) {
                                 if (variantList.first().value<void*>()) {
                                     ORM_Impl::write(isQObject, variant, property, variantList.first());
-                                    qDebug() << "Write " << property.name() << variantList.first().data();
                                 }
                             }
-                            qDebug() << "afterWrite" << property.name();
                             continue;
                         }
                     }

@@ -6,7 +6,7 @@
 
 class QDebug;
 
-void test0();
+void test_QtStructures();
 
 #include <QChar>
 #include <QString>
