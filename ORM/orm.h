@@ -7,736 +7,925 @@
 
 #include "orm_def.h"
 
-#include <QMetaObject>
-#include <QVariant>
 #include <list>
 #include <vector>
 #include <QList>
-#include <QPointer>
 #include <QVector>
-#include <QSqlQuery>
+#include <QMetaObject>
+#include <QMetaProperty>
+#include <QVariant>
+#include <QPointer>
+#include <memory>
 
 
-template <typename T>  int  ormRegisterType     (const char * c = nullptr);
-template <typename T>  int  ormRegisterTypeEx   (const char * c = nullptr);
-template <typename T>  int  ormRegisterQObject  (const char * c = nullptr);
 
-namespace orm_pointers { struct ORMPointerStub; }
+ORM_DECLARE_OBJECT_ALL_SMARTPOINTERS(QObject)
 
+class QSqlQuery;
 
-struct ORM_Config
+namespace orm
 {
-    static void addIgnoredType(int meta_type_id);
-    static bool isIgnoredType(int meta_type_id);
-    static void removeIgnoredType(int meta_type_id);
-    template <typename T> static void addIgnoredType(){ addIgnoredType(qMetaTypeId<T>()); }
-    template <typename T> static bool isIgnoredType(){ return isIgnoredType(qMetaTypeId<T>()); }
-    template <typename T> static void removeIgnoredType(){ removeIgnoredType(qMetaTypeId<T>()); }
+    template <typename T>  int  Register  (const char * c = nullptr);   // T and T* for QGADGET, T* for QOBJECT
+    template <typename T>  int  RegisterEx(const char * c = nullptr);   // Register<T>(c) + smartpointers
 
-    static void addPrimitiveType(int meta_type_id);
-    static bool isPrimitiveType(int meta_type_id);
-    static void removePrimitiveType(int meta_type_id);
-    template <typename T> static void addPrimitiveType(){ addPrimitiveType(qMetaTypeId<T>()); }
-    template <typename T> static bool isPrimitiveType(){ return isPrimitiveType(qMetaTypeId<T>()); }
-    template <typename T> static void removePrimitiveType(){ removePrimitiveType(qMetaTypeId<T>()); }
-
-    static void addPrimitiveStringType(int meta_type_id);
-    static bool isPrimitiveStringType(int meta_type_id);
-    static void removePrimitiveStringType(int meta_type_id);
-    template <typename T> static void addPrimitiveStringType(){ addPrimitiveStringType(qMetaTypeId<T>()); }
-    template <typename T> static bool isPrimitiveStringType(){ return isPrimitiveStringType(qMetaTypeId<T>()); }
-    template <typename T> static void removePrimitiveStringType(){ removePrimitiveStringType(qMetaTypeId<T>()); }
-
-    static void addPrimitiveRawType(int meta_type_id);
-    static bool isPrimitiveRawType(int meta_type_id);
-    static void removePrimitiveRawType(int meta_type_id);
-    template <typename T> static void addPrimitiveRawType(){ addPrimitiveRawType(qMetaTypeId<T>()); }
-    template <typename T> static bool isPrimitiveRawType(){ return isPrimitiveRawType(qMetaTypeId<T>()); }
-    template <typename T> static void removePrimitiveRawType(){ removePrimitiveRawType(qMetaTypeId<T>()); }
-
-    static void addPointerStub(orm_pointers::ORMPointerStub const&);
-    static orm_pointers::ORMPointerStub getPointerStub(int metaTypeID);
-
-    static void addPairType         (int firstTypeID, int secondTypeID, int pairTypeID);
-    static void addContainerPairType(int firstTypeID, int secondTypeID, int pairTypeID);
-
-};
-
-class QDebug;
-QDebug operator<< (QDebug dbg, ORM_Config const& config);
-
-class ORM
-{
-    enum class QueryType {
-        Create, Insert, Select, Update, Delete, Drop
-    };
-
-public:
-    ORM(QString const& dbname = QString());
-    virtual ~ORM();
-
-    QString databaseName() const;
-    void setDatabaseName(const QString & databaseName);
-
-    template <typename T>    void     create           (                     );
-    template <typename T>    QList<T> select           (                     );
-    template <typename T>    QList<T*>selectObject     (                     );
-    template <typename T>    QList<T> selectWhere      (QVariantMap const&  w);
-    template <typename T>    QList<T*>selectObjectWhere(QVariantMap const&  w);
-    template <typename T>    T        get              (long long          id);
-    template <typename T>    T*       getObject        (long long          id);
-    template <typename T>    void     insert           (      T          & t );
-    template <typename T>    void     insert           (      T          * t );
-    template <typename T>    void     insert           (QList<T>         & tl);
-    template <typename T>    void     delet            (      T          & t );
-    template <typename T>    void     delet            (      T          * t );
-    template <typename T>    void     delet            (QList<T>         & tl);
-    template <typename T>    void     update           (      T          & t );
-    template <typename T>    void     update           (      T          * t );
-    template <typename T>    void     update           (QList<T>         & tl);
-    template <typename T>    void     drop             (                     );
-
-
-    void     create      (int meta_type_id                           );
-    QVariant select      (int meta_type_id                           );
-    QVariant selectWhere (int meta_type_id, QVariantMap const& wheres);
-    QVariant get         (int meta_type_id, long long              id);
-    void     insert      (int meta_type_id, QVariant         &  value);
-    void     delet       (int meta_type_id, QVariant         &  value);
-    void     update      (int meta_type_id, QVariant         &  value);
-    void     drop        (int meta_type_id                           );
-public:
-    void       meta_create       (QMetaObject const& meta,                            QString const& parent_name = "t", QString const& property_name = QString()                            );
-    QVariant   meta_select       (QMetaObject const& meta,                            QString const& parent_name = "t", QString const& property_name = QString(), long long parent_rowid = 0);
-    QVariant   meta_select_where (QMetaObject const& meta, QVariantMap const& wheres, QString const& parent_name = "t", QString const& property_name = QString()                            );
-    QVariant   meta_get          (QMetaObject const& meta, long long              id, QString const& parent_name = "t", QString const& property_name = QString()                            );
-    void       meta_insert       (QMetaObject const& meta, QVariant         &  value, QString const& parent_name = "t", QString const& property_name = QString(), long long parent_rowid = 0);
-    void       meta_update       (QMetaObject const& meta, QVariant         &  value, QString const& parent_name = "t", QString const& property_name = QString(), long long parent_rowid = 0);
-    void       meta_delete       (QMetaObject const& meta, QVariant         &  value, QString const& parent_name = "t", QString const& property_name = QString(), long long parent_rowid = 0);
-    void       meta_drop         (QMetaObject const& meta,                            QString const& parent_name = "t", QString const& property_name = QString()                            );
-    void     meta_create_pair(int meta_type_id,                  const QString &parent_name, QString const& property_name);
-    QVariant meta_select_pair(int meta_type_id,                  const QString &parent_name, QString const& property_name, long long parent_orm_rowid);
-    void     meta_insert_pair(int meta_type_id, QVariant &value, const QString &parent_name, QString const& property_name, long long parent_orm_rowid);
-    void     meta_update_pair(int meta_type_id, QVariant &value, const QString &parent_name, QString const& property_name, long long parent_orm_rowid);
-    void     meta_delete_pair(int meta_type_id, QVariant &value, const QString &parent_name, QString const& property_name, long long parent_orm_rowid);
-    void     meta_drop_pair  (int meta_type_id,                  const QString &parent_name, QString const& property_name);
-
-protected:
-    virtual QString normalize(QString const& str, QueryType queryType) const;
-    virtual QString normalizeVar(QString const& str, int meta_type_id, QueryType queryType) const;
-    virtual QString sqlType(int type_id) const;
-
-    virtual QString generate_table_name        (QString const& parent_name, QString const& property_name, QString const& class_name, QueryType queryType) const;
-    virtual long long get_last_inserted_rowid(QSqlQuery & query) const;
-    virtual long long get_changes (QSqlQuery & query) const;
-    virtual long long get_last_rowid (QString table_name) const;
-    virtual QString generate_create_query      (QString const& parent_name, QString const& property_name, QString const& class_name, QStringList const& names, QList<int> const& types                           ) const;
-    virtual QString generate_select_query      (QString const& parent_name, QString const& property_name, QString const& class_name, QStringList const& names, QList<int> const& types, bool parent_orm_rowid    ) const;
-    virtual QString generate_select_where_query(QString const& parent_name, QString const& property_name, QString const& class_name, QStringList const& names, QList<int> const& types, QVariantMap const& wheres) const;
-    virtual QString generate_get_query         (QString const& parent_name, QString const& property_name, QString const& class_name, QStringList const& names, QList<int> const& types                           ) const;
-    virtual QString generate_insert_query      (QString const& parent_name, QString const& property_name, QString const& class_name, QStringList const& names, QList<int> const& types, bool parent_orm_rowid    ) const;
-    virtual QString generate_update_query      (QString const& parent_name, QString const& property_name, QString const& class_name, QStringList const& names, QList<int> const& types, bool parent_orm_rowid    ) const;
-    virtual QString generate_delete_query      (QString const& parent_name, QString const& property_name, QString const& class_name,                                                    bool parent_orm_rowid    ) const;
-    virtual QString generate_drop_query        (QString const& parent_name, QString const& property_name, QString const& class_name                                                                              ) const;
-
-protected:
-    QString m_databaseName;
-    QMap<QString, QSqlQuery> insertQueries;
-    QMap<QString, QSqlQuery> updateQueries;
-    QMap<QString, QSqlQuery> selectQueries;
-    QMap<QString, QSqlQuery> getQueries;
-};
-
-
-template <typename T>
-void ORM::create() {
-    const QMetaObject * o = QMetaType::metaObjectForType(qMetaTypeId<T>());
-    if (o) {
-        meta_create(*o);
-    }
-}
-template <typename T>
-QList<T> ORM::select() {
-    QList<T> ret;
-    const QMetaObject * o = QMetaType::metaObjectForType(qMetaTypeId<T>());
-    if (o) {
-        QVariantList si = meta_select(*o).toList();
-        for (QVariant v : si) {
-            ret << v.value<T>();
-        }
-    }
-    return ret;
-}
-template <typename T>
-QList<T*> ORM::selectObject() {
-    QList<T*> ret;
-    const QMetaObject * o = QMetaType::metaObjectForType(qMetaTypeId<T>());
-    if (o) {
-        QVariantList si = meta_select(*o).toList();
-        for (QVariant v : si) {
-            T* t =  v.value<T*>();
-            if (t) {
-                ret << t;
-            }
-        }
-    }
-    return ret;
-}
-
-template <typename T>
-QList<T> ORM::selectWhere(QVariantMap const&  w) {
-    QList<T> ret;
-    const QMetaObject * o = QMetaType::metaObjectForType(qMetaTypeId<T>());
-    if (o) {
-        QVariantList si = meta_select_where(*o, w).toList();
-        for (QVariant v : si) {
-            ret << v.value<T>();
-        }
-    }
-    return ret;
-}
-template <typename T>
-QList<T*> ORM::selectObjectWhere(QVariantMap const& w) {
-    QList<T*> ret;
-    const QMetaObject * o = QMetaType::metaObjectForType(qMetaTypeId<T>());
-    if (o) {
-        QVariantList si = meta_select_where(*o, w).toList();
-        for (QVariant v : si) {
-            T* t =  v.value<T*>();
-            if (t) {
-                ret << t;
-            }
-        }
-    }
-    return ret;
-}
-
-template <typename T> T ORM::get(long long id ) {
-    const QMetaObject * o = QMetaType::metaObjectForType(qMetaTypeId<T>());
-    if (o) {
-        QVariantList si = meta_get(*o, id).toList();
-        if (si.size()) {
-            return si.first().value<T>();
-        }
-    }
-    return T();
-}
-template <typename T> T* ORM::getObject(long long id ) {
-    const QMetaObject * o = QMetaType::metaObjectForType(qMetaTypeId<T>());
-    if (o) {
-        QVariantList si = meta_get(*o, id).toList();
-        if (si.size()) {
-            return si.first().value<T*>();
-        }
-    }
-    return nullptr;
-}
-
-template <typename T>
-void ORM::insert(T & t) {
-    QVariant v = QVariant::fromValue(reinterpret_cast<void*>(&t));
-    meta_insert(t.staticMetaObject, v);
-}
-template <typename T>
-void ORM::insert(T * t) {
-    if (t) {
-        QVariant v = QVariant::fromValue(t);
-        meta_insert(t->staticMetaObject, v);
-    }
-}
-template <typename T>
-void ORM::insert(QList<T> & tl) {
-    for (T & t : tl) {
-        QVariant v = QVariant::fromValue(reinterpret_cast<void*>(&t));
-        meta_insert(t.staticMetaObject, v);
-    }
-}
-template <typename T>
-void ORM::delet(T & t) {
-    QVariant v = QVariant::fromValue(reinterpret_cast<void*>(&t));
-    meta_delete(t.staticMetaObject, v);
-}
-template <typename T>
-void ORM::delet(T * t) {
-    if (t) {
-        QVariant v = QVariant::fromValue(t);
-        meta_delete(t->staticMetaObject, v);
-    }
-}
-template <typename T>
-void ORM::delet(QList<T> & tl) {
-    for (T & t : tl) {
-        QVariant v = QVariant::fromValue(reinterpret_cast<void*>(&t));
-        meta_delete(t.staticMetaObject, v);
-    }
-}
-template <typename T>
-void ORM::update(T & t) {
-    QVariant v = QVariant::fromValue(reinterpret_cast<void*>(&t));
-    meta_update(t.staticMetaObject, v);
-}
-template <typename T>
-void ORM::update(T * t) {
-    if (t) {
-        QVariant v = QVariant::fromValue(t);
-        meta_update(t->staticMetaObject, v);
-    }
-}
-template <typename T>
-void ORM::update(QList<T> & tl) {
-    for (T & t : tl) {
-        QVariant v = QVariant::fromValue(reinterpret_cast<void*>(&t));
-        meta_update(t.staticMetaObject, v);
-    }
-}
-template <typename T>
-void ORM::drop() {
-    const QMetaObject * o = QMetaType::metaObjectForType(qMetaTypeId<T>());
-    if (o) {
-        meta_drop(*o);
-    }
-}
-
-
-namespace orm_pointers
-{
-    template <typename T> ORMPointerStub registerTypePointers();
-    template <typename T> ORMPointerStub registerTypeSmartPointers();
-
-
-    template <typename T>                 T* toPointer (T const& t){                 T* p = new T ; *p = t; return p; }
-    template <typename T>        QPointer<T> toPointerP(T const& t){                 T* p = new T ; *p = t; return p; }
-    template <typename T> QSharedPointer <T> toPointerS(T const& t){ QSharedPointer <T> p  (new T); *p = t; return p; }
-    template <typename T> std::shared_ptr<T> toPointers(T const& t){ std::shared_ptr<T> p  (new T); *p = t; return p; }
-
-    template <typename T> void* toVPointerT(                T  const& t){ return reinterpret_cast<void*>(const_cast<T*>(&t       )); }
-    template <typename T> void* toVPointer (                T *       t){ return reinterpret_cast<void*>(                t        ); }
-    template <typename T> void* toVPointerP(      QPointer <T>        t){ return reinterpret_cast<void*>(                t.data() ); }
-    template <typename T> void* toVPointerS(QSharedPointer <T> const& t){ return reinterpret_cast<void*>(const_cast<T*>( t.data())); }
-    template <typename T> void* toVPointers(std::shared_ptr<T> const& t){ return reinterpret_cast<void*>(const_cast<T*>( t.get ())); }
-
-    template <typename T>                 T* fromVoid (void* t){ return                    reinterpret_cast<T*>(t) ; }
-    template <typename T>       QPointer <T> fromVoidP(void* t){ return       QPointer <T>(reinterpret_cast<T*>(t)); }
-    template <typename T> QSharedPointer <T> fromVoidS(void* t){ return QSharedPointer <T>(reinterpret_cast<T*>(t)); }
-    template <typename T> std::shared_ptr<T> fromVoids(void* t){ return std::shared_ptr<T>(reinterpret_cast<T*>(t)); }
-
-    struct ORMPointerStub {
-        int T =0;   // T
-        int pT=0;   // T*
-        int PT=0;   // QPointer<T>
-        int ST=0;   // QSharedPointer<T>
-        int WT=0;   // QWeakPointer<T>
-        int sT=0;   // std::shared_ptr<T>
-        int wT=0;   // std::weak_ptr<T>
-    };
-
-    template <typename T> ORMPointerStub registerTypePointers()
+    namespace Pointers
     {
-        ORMPointerStub stub = ORM_Config::getPointerStub(qMetaTypeId<T>());
-        if (!stub.T) {
-            stub.T = qMetaTypeId<T>();
-        }
-        if (!stub.pT) {
-            stub.pT = qMetaTypeId<T*>() ? qMetaTypeId<T*>() : qRegisterMetaType<T*>();
-            QMetaType::registerConverter< T , T*    >(&toPointer <T>);
-            QMetaType::registerConverter< T , void* >(&toVPointerT<T>);
-            QMetaType::registerConverter< T*, void* >(&toVPointer <T>);
-            QMetaType::registerConverter< void*, T* >(&fromVoid <T>);
-        }
-        return stub;
+        struct PointerStub; // stores different pointer type IDs for same T. Add your field here for new pointer type.
+        template <typename T> PointerStub registerTypePointers();        // T* for QGADGET, T* and QPointer<T> and QScopedPointer<T> for QObject
+        template <typename T> PointerStub registerTypeSmartPointers();   // std::shared_ptr<T>, std::weak_ptr<T>, QSharedPointer<T>, QWeakPointer<T>
     }
-    template <typename T> ORMPointerStub registerTypeSmartPointers()
-    {
-        ORMPointerStub stub = ORM_Config::getPointerStub(qMetaTypeId<T>());
-        if (!stub.ST) {
-            stub.ST = qMetaTypeId< QSharedPointer<T> >() ? qMetaTypeId< QSharedPointer<T> >() : qRegisterMetaType< QSharedPointer<T> >();
-            QMetaType::registerConverter< QSharedPointer<T>, void* >(&toVPointerS<T>);
-            QMetaType::registerConverter< void*, QSharedPointer<T> >(&fromVoidS<T>);
-        }
-        if (!stub.WT) {
-            stub.WT = qMetaTypeId< QWeakPointer<T> >() ? qMetaTypeId< QWeakPointer<T> >() : qRegisterMetaType< QWeakPointer<T> >();
-        }
-        if (!stub.sT) {
-            stub.sT = qMetaTypeId< std::shared_ptr<T> >() ? qMetaTypeId< std::shared_ptr<T> >() : qRegisterMetaType< std::shared_ptr<T> >();
-            QMetaType::registerConverter< void*, std::shared_ptr<T> >(&fromVoids<T>);
-            QMetaType::registerConverter< std::shared_ptr<T>, void* >(&toVPointers<T>);
-        }
-        if (!stub.wT) {
-            stub.wT = qMetaTypeId< std::weak_ptr<T> >() ? qMetaTypeId< std::weak_ptr<T> >() : qRegisterMetaType< std::weak_ptr<T> >();
-        }
 
-        return stub;
+    namespace Containers
+    {
+        template <typename T>                           void registerSequentialContainers();  // QList<T>, QVector<T>, std::list<T>, std::vector<T>
+        template <typename K, typename T>               void registerQPair();                 // QPair<K,T>
+        template <template <typename,typename>
+                  class C, typename K, typename T>      void registerAssociative();           // C<K,T> usage registerAssociative<QMap,int,double>() for QMap<int, double>
+        template <template <typename> class Container>  void registerPrimitiveTypeContainer();
     }
-    template <typename T> ORMPointerStub registerTypeObjectPointer()
-    {
-        ORMPointerStub stub = ORM_Config::getPointerStub(qMetaTypeId<T>());
-        if (!stub.T) {
-            stub.T = qMetaTypeId<T>();
-        }
-        if (!stub.pT) {
-            stub.pT = qMetaTypeId<T*>();
-        }
-        if (!stub.PT) {
-            stub.PT = qMetaTypeId< QPointer<T> >() ? qMetaTypeId<QPointer<T>>() : qRegisterMetaType< QPointer<T> >();
-            QMetaType::registerConverter< QPointer<T>, void* >(&toVPointerP<T>);
-            QMetaType::registerConverter< void*, QPointer<T> >(&fromVoidP<T>);
-        }
-        return stub;
-    }
-}
 
-namespace orm_containers
-{
-    template <typename T> void registerSequentialContainers(); // QList/QVector/std::list/std::vector
-    template <typename K, typename T> void registerQPair();    // QPair
-    template <typename K, typename T> void registerQMap();     // QMap
-    template <typename K, typename T> void registerQHash();    // QHash
-    template<template <typename> class Container> void registerPrimitiveTypeContainer();
-
-    struct ORM_QVariantPair //: public ORMValue
+    class ORM
     {
-        Q_GADGET
-        Q_PROPERTY(QVariant key MEMBER key)
-        Q_PROPERTY(QVariant value MEMBER value)
+        enum class Type { Type };
+        enum class Object { Object };
     public:
-        QVariant key, value;
-        QVariant& operator[](int index){ return index == 0 ? key : value; }
+        struct TableEntry
+        {
+            QMap <int, TableEntry> properties                ; // key is property index
+            QString                 property_name            ; // = typename for root elements
+            QString                 field_name               ; // if is_field = false than contains table name
+            int                     orig_meta_type_id = 0    ;
+            int                     norm_meta_type_id = 0    ; // T or T*
+            int                     property_index    = 0    ;
+            bool                    is_container      = false;
+            bool                    is_primary_key    = false;
+            bool                    is_orm_row_id     = false;
+            bool                    is_field          = true ;
+            bool                    is_QObject        = false;
+            bool                    is_not_null       = false;
+            bool                    is_unique         = false;
+            bool                    is_autoincrement  = false;
+            bool                    has_primary_key   = false;
+            bool                    has_orm_row_id    = false;
+        };
+    public:
+        QString m_databaseName;
+        bool                                  m_bufferization; // false disables saving TableEntry
+        QMap<int, QHash<QString, TableEntry>> m_types; // first key is metatype id, second key is parent name
+
+        QHash<QString, QString>               m_createQueries; // key is table name
+        QHash<QString, QString>               m_selectQueries; // key is table name
+        QHash<QString, QString>               m_insertQueries; // key is table name
+        QHash<QString, QString>               m_updateQueries; // key is table name
+        QHash<QString, QString>               m_deleteQueries; // key is table name
+        QHash<QString, QString>               m_dropQueries; // key is table name
+
+
+    public:
+        template <class T>                                                             void             create()                         {        ORM_Impl::create       <T>(this);        }
+        template <class T> typename std::enable_if<!std::is_base_of<QObject,T>::value, QList<T >>::type select()                         { return ORM_Impl::selectGadget <T>(this);        }
+        template <class T> typename std::enable_if< std::is_base_of<QObject,T>::value, QList<T*>>::type select()                         { return ORM_Impl::selectObject <T>(this);        }
+        template <class T> typename std::enable_if<!std::is_base_of<QObject,T>::value, QList<T >>::type select(QVariantMap const& where) { return ORM_Impl::selectGadgetW<T>(this, where); }
+        template <class T> typename std::enable_if< std::is_base_of<QObject,T>::value, QList<T*>>::type select(QVariantMap const& where) { return ORM_Impl::selectObjectW<T>(this, where); }
+        template <class T> typename std::enable_if<!std::is_base_of<QObject,T>::value,       T  >::type get   (long long id)             { return ORM_Impl::getGadget    <T>(this, id);    }
+        template <class T> typename std::enable_if< std::is_base_of<QObject,T>::value,       T* >::type get   (long long id)             { return ORM_Impl::getObject    <T>(this, id);    }
+        template <class T>                                                             void             insert(T const& t)               {        ORM_Impl::insert       <T>(this, t);     }
+        template <class T>                                                             void             insert(T * t)                    {        ORM_Impl::insert       <T>(this, t);     }
+        template <class T>                                                             void             insert(QList<T> const& tl)       {        ORM_Impl::insert       <T>(this, tl);    }
+        template <class T>                                                             void             delet (T const& t)               {        ORM_Impl::delet        <T>(this, t);     }
+        template <class T>                                                             void             delet (T * t)                    {        ORM_Impl::delet        <T>(this, t);     }
+        template <class T>                                                             void             delet (QList<T> const& tl)       {        ORM_Impl::delet        <T>(this, tl);    }
+        template <class T>                                                             void             update(T const& t)               {        ORM_Impl::update       <T>(this, t);     }
+        template <class T>                                                             void             update(T * t)                    {        ORM_Impl::update       <T>(this, t);     }
+        template <class T>                                                             void             update(QList<T> const& tl)       {        ORM_Impl::update       <T>(this, tl);    }
+        template <class T>                                                             void             drop  ()                         {        ORM_Impl::drop         <T>(this);        }
+
+    public:
+        ORM(QString const& dbname = QString());
+        virtual ~ORM();
+
+        QString databaseName() const;
+        void setDatabaseName(const QString & databaseName);
+
+        void     id_create       (int meta_type_id                           );
+        QVariant id_select       (int meta_type_id                           );
+        QVariant id_select_where (int meta_type_id, QVariantMap const& wheres);
+        QVariant id_get          (int meta_type_id, long long              id);
+        void     id_insert       (int meta_type_id, QVariant         &  value);
+        void     id_delete       (int meta_type_id, QVariant         &  value);
+        void     id_update       (int meta_type_id, QVariant         &  value);
+        void     id_drop         (int meta_type_id                           );
+
+//    protected:
+        virtual long long get_last_inserted_rowid  (QSqlQuery & query)                                                                                                                                                 const =0;
+        virtual long long get_changes              (QSqlQuery & query)                                                                                                                                                 const =0;
+        virtual long long get_last_rowid           (QString table_name)                                                                                                                                                const =0;
+
+        virtual QString normalize                  (QString const& str                  )                                                                                                                              const =0;
+        virtual QString normalizeVar               (QString const& str, int meta_type_id)                                                                                                                              const =0;
+        virtual QString sqlType                    (int type_id)                                                                                                                                                       const =0;
+
+        virtual QString generate_table_name        (QString const& parent_name, QString const& property_name, QString const& class_name)                                                                               const =0;
+
+        virtual QString generate_create_query      (ORM::TableEntry const& entry, ORM::TableEntry * parent) const =0;
+        virtual QString generate_insert_query      (ORM::TableEntry const& entry, ORM::TableEntry * parent) const =0;
+        virtual QString generate_select_query      (ORM::TableEntry const& entry, ORM::TableEntry * parent) const =0;
+        virtual QString generate_update_query      (ORM::TableEntry const& entry, ORM::TableEntry * parent) const =0;
+        virtual QString generate_delete_query      (ORM::TableEntry const& entry, ORM::TableEntry * parent) const =0;
+        virtual QString generate_drop_query        (ORM::TableEntry const& entry, ORM::TableEntry * parent) const =0;
+
+    public: //protected:
+        class ORM_Impl
+        {
+        public:
+            static QString rowidName();
+            static QString parentRowidName();
+        public:
+            static ORM::TableEntry queryData(ORM * orm, int meta_type_id);
+            static QVariant read(bool isObject, ORM::TableEntry const& data, QVariant const& value);
+
+            static void     meta_create(ORM * orm, TableEntry & entry,                   TableEntry * parent = nullptr                                        );
+            static void     meta_insert(ORM * orm, TableEntry & entry, QVariant & value, TableEntry * parent = nullptr, QVariant const& parentVal = QVariant());
+            static QVariant meta_select(ORM * orm, TableEntry & entry,                   TableEntry * parent = nullptr, QVariant const& parentVal = QVariant());
+            static void     meta_update(ORM * orm, TableEntry & entry, QVariant & value, TableEntry * parent = nullptr, QVariant const& parentVal = QVariant());
+            static void     meta_delete(ORM * orm, TableEntry & entry, QVariant & value, TableEntry * parent = nullptr, QVariant const& parentVal = QVariant());
+            static void     meta_drop  (ORM * orm, TableEntry & entry,                   TableEntry * parent = nullptr                                        );
+
+        public:
+            template<class T>
+            static void create           (ORM * orm, typename std::enable_if<!std::is_base_of<QObject,T>::value, Type>::type = Type::Type) {
+                orm->id_create(qMetaTypeId<T>());
+            }
+            template<class T>
+            static void create           (ORM * orm, typename std::enable_if<std::is_base_of<QObject,T>::value, Object>::type = Object::Object) {
+                orm->id_create(qMetaTypeId<T*>());
+            }
+
+
+
+            template <typename T> static QList<T> selectGadget(ORM * orm)
+            {
+                QList<T> ret;
+                QVariantList si = orm->id_select(qMetaTypeId<T>()).toList();
+                for (QVariant v : si) {
+                    ret << v.value<T>();
+                }
+                return ret;
+            }
+            template <typename T> static QList<T*> selectObject(ORM * orm)
+            {
+                QList<T*> ret;
+                QVariantList si = orm->id_select(qMetaTypeId<T*>()).toList();
+                for (QVariant v : si) {
+                    T* t =  v.value<T*>();
+                    if (t) {
+                        ret << t;
+                    }
+                }
+                return ret;
+            }
+            template <typename T> static QList<T> selectGadgetW(ORM * orm, QVariantMap const&  where) {
+                QList<T> ret;
+                QVariantList si = orm->id_select_where(qMetaTypeId<T>(), where).toList();
+                for (QVariant v : si) {
+                    ret << v.value<T>();
+                }
+                return ret;
+            }
+            template <typename T> static QList<T*> selectObjectW(ORM * orm, QVariantMap const&  where) {
+
+                QList<T*> ret;
+                QVariantList si = orm->id_select_where(qMetaTypeId<T*>(), where).toList();
+                for (QVariant v : si) {
+                    T* t =  v.value<T*>();
+                    if (t) {
+                        ret << t;
+                    }
+                }
+                return ret;
+            }
+
+            template <typename T> static T getGadget(ORM * orm, long long id) {
+                QVariantList si = orm->id_get(qMetaTypeId<T>(), id).toList();
+                if (si.size()) {
+                    return si.first().value<T>();
+                }
+                return T();
+            }
+            template <typename T> static T* getObject(ORM * orm, long long id)
+            {
+                QVariantList si = orm->id_get(qMetaTypeId<T*>(), id).toList();
+                if (si.size()) {
+                    return si.first().value<T*>();
+                }
+                return nullptr;
+            }
+
+            template <typename T> static void insert(ORM * orm, T const& t, typename std::enable_if<!std::is_base_of<QObject,T>::value, Type>::type = Type::Type) {
+                QVariant v = QVariant::fromValue(t);
+                orm->id_insert(v.userType(), v);
+            }
+            template <typename T> static void insert(ORM * orm, T const& t, typename std::enable_if<std::is_base_of<QObject,T>::value, Object>::type = Object::Object) {
+                QVariant v = QVariant::fromValue(const_cast<T*>(&t));
+                orm->id_insert(v.userType(), v);
+            }
+            template <typename T> static void insert(ORM * orm, T * t) {
+                if (t) {
+                    QVariant v = QVariant::fromValue(t);
+                    orm->id_insert(v.userType(), v);
+                }
+            }
+            template <typename T> static void insert(ORM * orm, QList<T> const& tl, typename std::enable_if<!std::is_base_of<QObject,T>::value, Type>::type = Type::Type) {
+                for (T const& t : tl) {
+                    QVariant v = QVariant::fromValue(t);
+                    orm->id_insert(v.userType(), v);
+                }
+            }
+            template <typename T> static void insert(ORM * orm, QList<T> const& tl, typename std::enable_if<std::is_base_of<QObject,T>::value, Object>::type = Object::Object) {
+                for (T const& t : tl) {
+                    QVariant v = QVariant::fromValue(const_cast<T*>(&t));
+                    orm->id_insert(v.userType(), v);
+                }
+            }
+            template <typename T> static void delet(ORM * orm, T const& t, typename std::enable_if<!std::is_base_of<QObject,T>::value, Type>::type = Type::Type) {
+                QVariant v = QVariant::fromValue(t);
+                orm->id_delete(v.userType(), v);
+            }
+            template <typename T> static void delet(ORM * orm, T const& t, typename std::enable_if<std::is_base_of<QObject,T>::value, Object>::type = Object::Object) {
+                QVariant v = QVariant::fromValue(const_cast<T*>(&t));
+                orm->id_delete(v.userType(), v);
+            }
+            template <typename T> static void delet(ORM * orm, T * t) {
+                if (t) {
+                    QVariant v = QVariant::fromValue(t);
+                    orm->id_delete(v.userType(), v);
+                }
+            }
+            template <typename T> static void delet(ORM * orm, QList<T> const& tl, typename std::enable_if<!std::is_base_of<QObject,T>::value, Type>::type = Type::Type) {
+                for (T const& t : tl) {
+                    QVariant v = QVariant::fromValue(t);
+                    orm->id_delete(v.userType(), v);
+                }
+            }
+            template <typename T> static void delet(ORM * orm, QList<T> const& tl, typename std::enable_if<std::is_base_of<QObject,T>::value, Object>::type = Object::Object) {
+                for (T const& t : tl) {
+                    QVariant v = QVariant::fromValue(const_cast<T*>(&t));
+                    orm->id_delete(v.userType(), v);
+                }
+            }
+            template <typename T> static void update(ORM * orm, T const& t, typename std::enable_if<!std::is_base_of<QObject,T>::value, Type>::type = Type::Type) {
+                QVariant v = QVariant::fromValue(t);
+                orm->id_update(v.userType(), v);
+            }
+            template <typename T> static void update(ORM * orm, T const& t, typename std::enable_if<std::is_base_of<QObject,T>::value, Object>::type = Object::Object) {
+                QVariant v = QVariant::fromValue(const_cast<T*>(&t));
+                orm->id_update(v.userType(), v);
+            }
+            template <typename T> static void update(ORM * orm, T * t) {
+                if (t) {
+                    QVariant v = QVariant::fromValue(t);
+                    orm->id_update(v.userType(), v);
+                }
+            }
+            template <typename T> static void update(ORM * orm, QList<T> const& tl, typename std::enable_if<!std::is_base_of<QObject,T>::value, Type>::type = Type::Type) {
+                for (T const& t : tl) {
+                    QVariant v = QVariant::fromValue(t);
+                    orm->id_update(v.userType(), v);
+                }
+            }
+            template <typename T> static void update(ORM * orm, QList<T> const& tl, typename std::enable_if<std::is_base_of<QObject,T>::value, Object>::type = Object::Object) {
+                for (T const& t : tl) {
+                    QVariant v = QVariant::fromValue(const_cast<T*>(&t));
+                    orm->id_update(v.userType(), v);
+                }
+            }
+            template<class T>
+            static void drop           (ORM * orm, typename std::enable_if<!std::is_base_of<QObject,T>::value, Type>::type = Type::Type) {
+                orm->id_drop(qMetaTypeId<T>());
+            }
+            template<class T>
+            static void drop           (ORM * orm, typename std::enable_if<std::is_base_of<QObject,T>::value, Object>::type = Object::Object) {
+                orm->id_drop(qMetaTypeId<T*>());
+            }
+        protected:
+            void meta_insert2(ORM * orm, int meta_type_id, QVariant & value, const QString & parent_name, const QString & property_name, long long parent_orm_rowid);
+        };
+        friend class ORM_Impl;
+    };
+
+    struct Config
+    {
+
+        template <typename T> static void addIgnoredType           () {        Config_Impl::addIgnoredType    <T>(); }
+        template <typename T> static bool isIgnoredType            () { return Config_Impl::isIgnoredType     <T>(); }
+        template <typename T> static void removeIgnoredType        () {        Config_Impl::removeIgnoredType <T>(); }
+
+        template <typename T> static void addPrimitiveType         () {        addPrimitiveType         (qMetaTypeId<T>()); }
+        template <typename T> static bool isPrimitiveType          () { return isPrimitiveType          (qMetaTypeId<T>()); }
+        template <typename T> static void removePrimitiveType      () {        removePrimitiveType      (qMetaTypeId<T>()); }
+
+        template <typename T> static void addPrimitiveStringType   () {        addPrimitiveStringType   (qMetaTypeId<T>()); }
+        template <typename T> static bool isPrimitiveStringType    () { return isPrimitiveStringType    (qMetaTypeId<T>()); }
+        template <typename T> static void removePrimitiveStringType() {        removePrimitiveStringType(qMetaTypeId<T>()); }
+
+        template <typename T> static void addPrimitiveRawType      () {        addPrimitiveRawType      (qMetaTypeId<T>()); }
+        template <typename T> static bool isPrimitiveRawType       () { return isPrimitiveRawType       (qMetaTypeId<T>()); }
+        template <typename T> static void removePrimitiveRawType   () {        removePrimitiveRawType   (qMetaTypeId<T>()); }
+
+        // Type is ignored by ORM
+        static void addIgnoredType   (int meta_type_id);
+        static bool isIgnoredType    (int meta_type_id);
+        static void removeIgnoredType(int meta_type_id);
+
+        // Type is
+        static void addPrimitiveType   (int meta_type_id);
+        static bool isPrimitiveType    (int meta_type_id);
+        static void removePrimitiveType(int meta_type_id);
+
+        static void addPrimitiveStringType   (int meta_type_id);
+        static bool isPrimitiveStringType    (int meta_type_id);
+        static void removePrimitiveStringType(int meta_type_id);
+
+        static void addPrimitiveRawType   (int meta_type_id);
+        static bool isPrimitiveRawType    (int meta_type_id);
+        static void removePrimitiveRawType(int meta_type_id);
+
+        static void addPointerStub(orm::Pointers::PointerStub const&);
+        static orm::Pointers::PointerStub getPointerStub(int metaTypeID);
+
+        static void addPairType         (int firstTypeID, int secondTypeID, int pairTypeID);
+        static void addContainerPairType(int firstTypeID, int secondTypeID, int pairTypeID);
+        static void addSeqContainerType (int seqTypeID, int innerTypeID);
+
+
+
+    protected:
+        struct Config_Impl
+        {
+            template <typename T> static typename std::enable_if< QMetaTypeId2<T>::Defined, void>::type addIgnoredType   () {        orm::Config::addIgnoredType   (qMetaTypeId<T>()); }
+            template <typename T> static typename std::enable_if< QMetaTypeId2<T>::Defined, bool>::type isIgnoredType    () { return orm::Config::isIgnoredType    (qMetaTypeId<T>()); }
+            template <typename T> static typename std::enable_if< QMetaTypeId2<T>::Defined, void>::type removeIgnoredType() {        orm::Config::removeIgnoredType(qMetaTypeId<T>()); }
+            template <typename T> static typename std::enable_if<!QMetaTypeId2<T>::Defined, void>::type addIgnoredType   () {                                                          }
+            template <typename T> static typename std::enable_if<!QMetaTypeId2<T>::Defined, bool>::type isIgnoredType    () { return true;                                             }
+            template <typename T> static typename std::enable_if<!QMetaTypeId2<T>::Defined, void>::type removeIgnoredType() {                                                          }
+
+        };
+
+        //    template <typename T>
+        //    static QVariant makeVariant(T & t) {
+        //        return makeVariant(&t);
+        //    }
+        //    template <template <typename> class Container, typename T>
+        //    static QVariant makeVariant(Container<T> & tl) {
+        //        QVariantList vlist;
+        //        for (auto const& t : tl) {
+        //            vlist << makeVariant(t);
+        //        }
+        //        return vlist;
+        //    }
+        //    template <typename T>
+        //    static QVariant makeVariant(QPointer<T> & t) {
+        //        return makeVariant(t.data());
+        //    }
+        //    template <typename T>
+        //    static QVariant makeVariant(QSharedPointer<T> & t) {
+        //        return makeVariant(t.data());
+        //    }
+        //    template <typename T>
+        //    static QVariant makeVariant(QScopedPointer<T> & t) {
+        //        return makeVariant(t.data());
+        //    }
+        //    template <typename T>
+        //    static QVariant makeVariant(QWeakPointer<T> & t) {
+        //        return makeVariant(t.data());
+        //    }
+        //    template <typename T>
+        //    static QVariant makeVariant(std::unique_ptr<T> & t) {
+        //        return makeVariant(t.get());
+        //    }
+        //    template <typename T>
+        //    static QVariant makeVariant(std::shared_ptr<T> & t) {
+        //        return makeVariant(t.get());
+        //    }
+        //    template <typename T>
+        //    static QVariant makeVariant(std::weak_ptr<T> & t) {
+        //        return makeVariant(t.lock());
+        //    }
+        //    template <typename T>
+        //    static QVariant makeVariant(T * t) {
+        //        if (t == nullptr) {
+        //            return QVariant();
+        //        }
+        //        return QVariant::fromValue(t);
+        //    }
     };
 
 
-    template <typename T> QList      <T>     qListFromQVariantList(QVariant const& v)
-    {
-        QList<T> list;
-        QSequentialIterable si = v.value<QSequentialIterable>();
-        for (QVariant const& v : si) {
-            if(v.canConvert<T>()) {
-                list << v.value<T>();
-            }
-        }
-        return list;
-    }
-    template <typename T> QVector    <T>   qVectorFromQVariantList(QVariant const& v) { return qListFromQVariantList<T>(v).toVector              (); }
-    template <typename T> std::list  <T>   stdListFromQVariantList(QVariant const& v) { return qListFromQVariantList<T>(v).toStdList             (); }
-    template <typename T> std::vector<T> stdVectorFromQVariantList(QVariant const& v) { return qListFromQVariantList<T>(v).toVector().toStdVector(); }
 
-    template <typename T> void registerSequentialContainers()
+    namespace Pointers
     {
-        qMetaTypeId<QList      <T>>() ? qMetaTypeId<QList      <T>>() : qRegisterMetaType<QList      <T>>();
-        qMetaTypeId<QVector    <T>>() ? qMetaTypeId<QVector    <T>>() : qRegisterMetaType<QVector    <T>>();
-        qMetaTypeId<std::list  <T>>() ? qMetaTypeId<std::list  <T>>() : qRegisterMetaType<std::list  <T>>();
-        qMetaTypeId<std::vector<T>>() ? qMetaTypeId<std::vector<T>>() : qRegisterMetaType<std::vector<T>>();
-        QMetaType::registerConverter<QVariantList, QList      <T>>(&(    qListFromQVariantList<T>));
-        QMetaType::registerConverter<QVariantList, QVector    <T>>(&(  qVectorFromQVariantList<T>));
-        QMetaType::registerConverter<QVariantList, std::list  <T>>(&(  stdListFromQVariantList<T>));
-        QMetaType::registerConverter<QVariantList, std::vector<T>>(&(stdVectorFromQVariantList<T>));
-    }
+
+        struct PointerStub {
+            int T =0;   // T
+            int pT=0;   // T*
+            int PT=0;   // QPointer<T>
+            int ST=0;   // QSharedPointer<T>
+            int WT=0;   // QWeakPointer<T>
+            int sT=0;   // std::shared_ptr<T>
+            int wT=0;   // std::weak_ptr<T>
+        };
+        struct NewStub { };
+        struct VoidPointer { void* data = nullptr; VoidPointer():data(nullptr){} VoidPointer(void*p):data(p){} };
+
+        namespace Pointers_Impl
+        {
+
+            template <typename T>                 T* toPointer (T const& t){                 T* p = new T ; *p = t; return p; }
+            template <typename T>        QPointer<T> toPointerP(T const& t){                 T* p = new T ; *p = t; return p; }
+            template <typename T> QSharedPointer <T> toPointerS(T const& t){ QSharedPointer <T> p  (new T); *p = t; return p; }
+            template <typename T> std::shared_ptr<T> toPointers(T const& t){ std::shared_ptr<T> p  (new T); *p = t; return p; }
+            template <typename T> QSharedPointer <T> fromPointerS(         T* t){ return QSharedPointer <T>                     (t) ; }
+            template <typename T> std::shared_ptr<T> fromPointers(         T* t){ return std::shared_ptr<T>                     (t) ; }
+
+            template <typename T>                 T* fromNewStub (NewStub const&){                 T* p = new T ; return p; }
+            template <typename T>        QPointer<T> fromNewStubP(NewStub const&){        QPointer<T> p  (new T); return p; }
+            template <typename T> QSharedPointer <T> fromNewStubS(NewStub const&){ QSharedPointer <T> p  (new T); return p; }
+            template <typename T> std::shared_ptr<T> fromNewStubs(NewStub const&){ std::shared_ptr<T> p  (new T); return p; }
 
 
-    template <typename K, typename T> QPair<K,T> qPairFromPairStub(ORM_QVariantPair const& ps)
-    {
-        QPair<K,T> pair;
-        if (ps.key.canConvert<K>() && ps.value.canConvert<T>()) {
-            pair.first = ps.key.value<K>();
-            pair.second = ps.value.value<T>();
-        }
-        return pair;
-    }
-    template <typename K, typename T> QPair<K,T> qPairFromQVariant(QVariant const& v)
-    {
-        QPair<K,T> pair;
-        if (v.canConvert<ORM_QVariantPair>()) {
-            ORM_QVariantPair ps = v.value<ORM_QVariantPair>();
-            if (ps.key.canConvert<K>() && ps.value.canConvert<T>()) {
-                pair.first = ps.key.value<K>();
-                pair.second = ps.value.value<T>();
-            }
-        }
-        return pair;
-    }
-    template <typename K, typename T> QPair<K,T> qPairFromQVariantList(QVariantList const& vl)
-    {
-        QPair<K,T> pair;
-        QVariant v;
-        if (vl.size()) {
-            v = vl.first();
-        }
-        if (v.canConvert<ORM_QVariantPair>()) {
-            ORM_QVariantPair ps = v.value<ORM_QVariantPair>();
-            if (ps.key.canConvert<K>() && ps.value.canConvert<T>()) {
-                pair.first = ps.key.value<K>();
-                pair.second = ps.value.value<T>();
-            }
-        }
-        return pair;
-    }
-    template <typename K, typename T> QMap<K,T> qMapFromQVariantMap(QVariant const& v)
-    {
-        QMap<K,T> list;
-        QAssociativeIterable ai = v.value<QAssociativeIterable>();
-        QAssociativeIterable::const_iterator it = ai.begin();
-        const QAssociativeIterable::const_iterator end = ai.end();
-        for ( ; it != end; ++it) {
-            if(it.key().canConvert<K>() && it.value().canConvert<T>()) {
-                list.insert(it.key().value<K>(), it.value().value<T>());
-            }
-        }
-        return list;
-    }
-    template <typename K, typename T> QMap<K,T> qMapFromQVariantList(QVariantList const& v)
-    {
-        QMap<K,T> list;
-        for (auto it = v.begin(); it != v.end(); ++it) {
-            if (it->canConvert<ORM_QVariantPair>()) {
-                ORM_QVariantPair p = it->value<ORM_QVariantPair>();
-                if (p.key.canConvert<K>() && p.value.canConvert<T>()) {
-                    list.insertMulti(p.key.value<K>(), p.value.value<T>());
+            template <typename T> VoidPointer toVoidPointerT(                T  const& t){ return VoidPointer( reinterpret_cast<void*>(const_cast<T*>(&t       )) ); }
+            template <typename T> VoidPointer toVoidPointer (                T *       t){ return VoidPointer( reinterpret_cast<void*>(                t        ) ); }
+            template <typename T> VoidPointer toVoidPointerP(      QPointer <T>        t){ return VoidPointer( reinterpret_cast<void*>(                t.data() ) ); }
+            template <typename T> VoidPointer toVoidPointerS(QSharedPointer <T> const& t){ return VoidPointer( reinterpret_cast<void*>(const_cast<T*>( t.data())) ); }
+            template <typename T> VoidPointer toVoidPointerW(  QWeakPointer <T> const& t){ return VoidPointer( reinterpret_cast<void*>(const_cast<T*>( t.data())) ); }
+            template <typename T> VoidPointer toVoidPointers(std::shared_ptr<T> const& t){ return VoidPointer( reinterpret_cast<void*>(const_cast<T*>( t.get ())) ); }
+            template <typename T> VoidPointer toVoidPointerw(  std::weak_ptr<T> const& t){ return VoidPointer( reinterpret_cast<void*>(const_cast<T*>( t.lock().get())) ); }
+
+            template <typename T>                 T  fromVoidPointerT   (VoidPointer const& t){ T Tt = *reinterpret_cast<T*>(t.data) ; return Tt; }
+            template <typename T>                 T* fromVoidPointer    (VoidPointer const& t){ return                    reinterpret_cast<T*>(t.data) ; }
+            template <typename T>       QPointer <T> fromVoidPointerP   (VoidPointer const& t){ return       QPointer <T>(reinterpret_cast<T*>(t.data)); }
+            template <typename T> QSharedPointer <T> fromVoidPointerS   (VoidPointer const& t){ return QSharedPointer <T>(reinterpret_cast<T*>(t.data)); }
+            template <typename T> std::shared_ptr<T> fromVoidPointers   (VoidPointer const& t){ return std::shared_ptr<T>(reinterpret_cast<T*>(t.data)); }
+
+            template <typename T> typename std::enable_if<!std::is_base_of<QObject,T>::value, PointerStub>::type registerTypePointers()
+            {
+                PointerStub stub = Config::getPointerStub(qMetaTypeId<T>());
+                if (!stub.T) {
+                    stub.T = qMetaTypeId<T>();
                 }
-            }
-        }
-        return list;
-    }
-    template <typename K, typename T> QHash<K,T> qHashFromQVariantList(QVariantList const& v)
-    {
-        QHash<K,T> list;
-        for (auto it = v.begin(); it != v.end(); ++it) {
-            if (it->canConvert<ORM_QVariantPair>()) {
-                ORM_QVariantPair p = it->value<ORM_QVariantPair>();
-                if (p.key.canConvert<K>() && p.value.canConvert<T>()) {
-                    list.insertMulti(p.key.value<K>(), p.value.value<T>());
+                if (!stub.pT) {
+                    stub.pT = qMetaTypeId<T*>() ? qMetaTypeId<T*>() : qRegisterMetaType<T*>();
+                    //QMetaType::registerConverter< T , VoidPointer >(&  toVoidPointerT<T>);
+                    QMetaType::registerConverter< T*, VoidPointer >(&  toVoidPointer <T>);
+                    //QMetaType::registerConverter< VoidPointer, T  >(&fromVoidPointerT<T>);
+                    QMetaType::registerConverter< VoidPointer, T* >(&fromVoidPointer <T>);
+                    QMetaType::registerConverter< NewStub, T* >(&fromNewStub <T>);
                 }
+                return stub;
+            }
+            template <typename T> typename std::enable_if< std::is_base_of<QObject,T>::value, PointerStub>::type registerTypePointers()
+            {
+                PointerStub stub = Config::getPointerStub(qMetaTypeId<T*>());
+                if (!stub.pT) {
+                    stub.pT = qMetaTypeId<T*>();
+                    QMetaType::registerConverter< T*, VoidPointer >(&  toVoidPointer <T>);
+                    QMetaType::registerConverter< VoidPointer, T* >(&fromVoidPointer <T>);
+                    QMetaType::registerConverter< NewStub, T* >(&fromNewStub <T>);
+                }
+                if (!stub.PT) {
+                    stub.PT = qMetaTypeId< QPointer<T> >() ? qMetaTypeId<QPointer<T>>() : qRegisterMetaType< QPointer<T> >();
+                    QMetaType::registerConverter< QPointer<T>, VoidPointer >(&  toVoidPointerP<T>);
+                    QMetaType::registerConverter< VoidPointer, QPointer<T> >(&fromVoidPointerP<T>);
+                    QMetaType::registerConverter< NewStub, QPointer<T> >(&fromNewStubP<T>);
+                }
+                return stub;
             }
         }
-        return list;
-    }
-    template <typename K, typename T> QMultiMap<K,T> qMultiMapFromQVariantMap(QVariant const& v)
-    {
-        QMap<K,T> list;
-        QAssociativeIterable ai = v.value<QAssociativeIterable>();
-        QAssociativeIterable::const_iterator it = ai.begin();
-        const QAssociativeIterable::const_iterator end = ai.end();
-        for ( ; it != end; ++it) {
-            if(it.key().canConvert<K>() && it.value().canConvert<T>()) {
-                list.insertMulti(it.key().value<K>(), it.value().value<T>());
-            }
+
+        template <typename T> PointerStub registerTypePointers()
+        {
+            return Pointers_Impl::registerTypePointers<T>();
         }
-        return list;
-    }
-    template <typename K, typename T> QHash<K,T> qHashFromQVariantHash(QVariant const& v)
-    {
-        QHash<K,T> list;
-        QAssociativeIterable ai = v.value<QAssociativeIterable>();
-        QAssociativeIterable::const_iterator it = ai.begin();
-        const QAssociativeIterable::const_iterator end = ai.end();
-        for ( ; it != end; ++it) {
-            if(it.key().canConvert<K>() && it.value().canConvert<T>()) {
-                list.insert(it.key().value<K>(), it.value().value<T>());
+
+        template <typename T> PointerStub registerTypeSmartPointers()
+        {
+            PointerStub stub = Config::getPointerStub(qMetaTypeId<T*>());
+            if (!stub.pT) {
+                stub.pT = qMetaTypeId<T*>() ? qMetaTypeId<T*>() : qRegisterMetaType<T*>();
             }
-        }
-        return list;
-    }
-    template <typename K, typename T> QMultiHash<K,T> qMultiHashFromQVariantMultiHash(QVariant const& v)
-    {
-        QHash<K,T> list;
-        QAssociativeIterable ai = v.value<QAssociativeIterable>();
-        QAssociativeIterable::const_iterator it = ai.begin();
-        const QAssociativeIterable::const_iterator end = ai.end();
-        for ( ; it != end; ++it) {
-            if(it.key().canConvert<K>() && it.value().canConvert<T>()) {
-                list.insertMulti(it.key().value<K>(), it.value().value<T>());
+            if (!stub.ST) {
+                stub.ST = qMetaTypeId< QSharedPointer<T> >() ? qMetaTypeId< QSharedPointer<T> >() : qRegisterMetaType< QSharedPointer<T> >();
+                QMetaType::registerConverter<  VoidPointer, QSharedPointer<T> >(&Pointers_Impl::fromVoidPointerS<T>);
+                QMetaType::registerConverter<  QSharedPointer<T>, VoidPointer >(&Pointers_Impl::  toVoidPointerS<T>);
             }
+            if (!stub.WT) {
+                stub.WT = qMetaTypeId< QWeakPointer<T> >() ? qMetaTypeId< QWeakPointer<T> >() : qRegisterMetaType< QWeakPointer<T> >();
+                QMetaType::registerConverter<    QWeakPointer<T>, VoidPointer >(&Pointers_Impl::  toVoidPointerW<T>);
+            }
+            if (!stub.sT) {
+                stub.sT = qMetaTypeId< std::shared_ptr<T> >() ? qMetaTypeId< std::shared_ptr<T> >() : qRegisterMetaType< std::shared_ptr<T> >();
+                QMetaType::registerConverter< VoidPointer, std::shared_ptr<T> >(&Pointers_Impl::fromVoidPointers<T>);
+                QMetaType::registerConverter< std::shared_ptr<T>, VoidPointer >(&Pointers_Impl::  toVoidPointers<T>);
+            }
+            if (!stub.wT) {
+                stub.wT = qMetaTypeId< std::weak_ptr<T> >() ? qMetaTypeId< std::weak_ptr<T> >() : qRegisterMetaType< std::weak_ptr<T> >();
+                QMetaType::registerConverter<   std::weak_ptr<T>, VoidPointer >(&Pointers_Impl::  toVoidPointerw<T>);
+            }
+
+            return stub;
         }
-        return list;
     }
 
-    template <typename K, typename T> ORM_QVariantPair toQPairStub(QPair<K,T> const& v)
+    namespace Containers
     {
-        ORM_QVariantPair ps;
-        ps.key = QVariant::fromValue(v.first);
-        ps.value = QVariant::fromValue(v.second);
-        return ps;
-    }
+        template <typename T> void registerSequentialContainers(); // QList<T>/QVector<T>/std::list<T>/std::vector<T>
+        template <typename K, typename T> void registerQPair();    // QPair<K,T>
+        template <typename K, typename T, template <typename,typename> class C> void registerAssociative();
+        template<template <typename> class Container> void registerPrimitiveTypeContainer();
 
-    template <typename K, typename T> QList<ORM_QVariantPair> qMapToPairListStub(QMap<K,T> const& v)
-    {
-        QList<ORM_QVariantPair> psl;
-        for (auto i = v.begin(); i != v.end(); ++i) {
-            ORM_QVariantPair ps;
-            ps.key = QVariant::fromValue(i.key());
-            ps.value = QVariant::fromValue(i.value());
-            psl << ps;
-        }
-        return psl;
-    }
-    template <typename K, typename T> QList<ORM_QVariantPair> qHashToPairListStub(QHash<K,T> const& v)
-    {
-        QList<ORM_QVariantPair> psl;
-        for (auto i = v.begin(); i != v.end(); ++i) {
-            ORM_QVariantPair ps;
-            ps.key = QVariant::fromValue(i.key());
-            ps.value = QVariant::fromValue(i.value());
-            psl << ps;
-        }
-        return psl;
-    }
 
-    template <typename K, typename T> QMap<K,T> qMapFromPairListStub(QList<ORM_QVariantPair> const& v)
-    {
-        QMap<K,T> map;
-        for (auto i = v.begin(); i != v.end(); ++i) {
-            if (i->key.canConvert<K>() && i->value.canConvert<T>()) {
-                map.insertMulti(i->key.value<K>(), i->value.value<T>());
+        struct ORM_QVariantPair //: public ORMValue
+        {
+            Q_GADGET
+            Q_PROPERTY(QVariant key MEMBER key)
+            Q_PROPERTY(QVariant value MEMBER value)
+            Q_PROPERTY(QVariant orm_rowid MEMBER rowid)
+        public:
+            QVariant key, value, rowid;
+            QVariant& operator[](int index){ return index == 0 ? key : index == 1 ? value : rowid; }
+        };
+
+        namespace Containers_Impl
+        {
+            template <typename T> QList      <T>     qListFromQVariantList(QVariant const& v)
+            {
+                QList<T> list;
+                QSequentialIterable si = v.value<QSequentialIterable>();
+                for (QVariant const& v : si) {
+                    if(v.canConvert<T>()) {
+                        list << v.value<T>();
+                    }
+                }
+                return list;
             }
-        }
-        return map;
-    }
-    template <typename K, typename T> QHash<K,T> qHashFromPairListStub(QList<ORM_QVariantPair> const& v)
-    {
-        QHash<K,T> map;
-        for (auto i = v.begin(); i != v.end(); ++i) {
-            if (i->key.canConvert<K>() && i->value.canConvert<T>()) {
-                map.insertMulti(i->key.value<K>(), i->value.value<T>());
+            template <typename T> QVector    <T>   qVectorFromQVariantList(QVariant const& v) { return qListFromQVariantList<T>(v).toVector              (); }
+            template <typename T> std::list  <T>   stdListFromQVariantList(QVariant const& v) { return qListFromQVariantList<T>(v).toStdList             (); }
+            template <typename T> std::vector<T> stdVectorFromQVariantList(QVariant const& v) { return qListFromQVariantList<T>(v).toVector().toStdVector(); }
+
+            template <typename K, typename T> QPair<K,T> qPairFromPairStub(ORM_QVariantPair const& ps)
+            {
+                QPair<K,T> pair;
+                if (ps.key.canConvert<K>() && ps.value.canConvert<T>()) {
+                    pair.first = ps.key.value<K>();
+                    pair.second = ps.value.value<T>();
+                }
+                return pair;
             }
+            template <typename K, typename T> QPair<K,T> qPairFromQVariant(QVariant const& v)
+            {
+                QPair<K,T> pair;
+                if (v.canConvert<ORM_QVariantPair>()) {
+                    ORM_QVariantPair ps = v.value<ORM_QVariantPair>();
+                    if (ps.key.canConvert<K>() && ps.value.canConvert<T>()) {
+                        pair.first = ps.key.value<K>();
+                        pair.second = ps.value.value<T>();
+                    }
+                }
+                return pair;
+            }
+            template <typename K, typename T> QPair<K,T> qPairFromQVariantList(QVariantList const& vl)
+            {
+                QPair<K,T> pair;
+                QVariant v;
+                if (vl.size()) {
+                    v = vl.first();
+                }
+                if (v.canConvert<ORM_QVariantPair>()) {
+                    ORM_QVariantPair ps = v.value<ORM_QVariantPair>();
+                    if (ps.key.canConvert<K>() && ps.value.canConvert<T>()) {
+                        pair.first = ps.key.value<K>();
+                        pair.second = ps.value.value<T>();
+                    }
+                }
+                return pair;
+            }
+
+            template <typename K, typename T, template <typename,typename> class C> C<K,T> qAssociativeFromQVariantList(QVariantList const& v)
+            {
+                C<K,T> list;
+                for (auto it = v.begin(); it != v.end(); ++it) {
+                    if (it->canConvert<ORM_QVariantPair>()) {
+                        ORM_QVariantPair p = it->value<ORM_QVariantPair>();
+                        if (p.key.canConvert<K>() && p.value.canConvert<T>()) {
+                            list.insertMulti(p.key.value<K>(), p.value.value<T>());
+                        }
+                    }
+                }
+                return list;
+            }
+            template <typename K, typename T, template <typename,typename> class C> C<K,T> qAssociativeFromQVariantAssociative(QVariant const& v)
+            {
+                C<K,T> list;
+                QAssociativeIterable ai = v.value<QAssociativeIterable>();
+                QAssociativeIterable::const_iterator it = ai.begin();
+                const QAssociativeIterable::const_iterator end = ai.end();
+                for ( ; it != end; ++it) {
+                    if(it.key().canConvert<K>() && it.value().canConvert<T>()) {
+                        list.insert(it.key().value<K>(), it.value().value<T>());
+                    }
+                }
+                return list;
+            }
+
+            template <typename K, typename T> ORM_QVariantPair toQPairStub(QPair<K,T> const& v)
+            {
+                ORM_QVariantPair ps;
+                ps.key = QVariant::fromValue(v.first);
+                ps.value = QVariant::fromValue(v.second);
+                return ps;
+            }
+
+            template <typename K, typename T, template <typename,typename> class C> QList<ORM_QVariantPair> qAssociativeToPairListStub(C<K,T> const& v)
+            {
+                QList<ORM_QVariantPair> psl;
+                for (auto i = v.begin(); i != v.end(); ++i) {
+                    ORM_QVariantPair ps;
+                    ps.key = QVariant::fromValue(i.key());
+                    ps.value = QVariant::fromValue(i.value());
+                    psl << ps;
+                }
+                return psl;
+            }
+
+            template <typename K, typename T, template <typename,typename> class C> C<K,T> qAssociativeFromPairListStub(QList<ORM_QVariantPair> const& v)
+            {
+                C<K,T> map;
+                for (auto i = v.begin(); i != v.end(); ++i) {
+                    if (i->key.canConvert<K>() && i->value.canConvert<T>()) {
+                        map.insertMulti(i->key.value<K>(), i->value.value<T>());
+                    }
+                }
+                return map;
+            }
+
+
+            template <typename T, template <typename> class Container> QString primitiveToString(Container<T> const& c)
+            {
+                QStringList list;
+                for (T const& t : c) {
+                    list << QString::number(t);
+                }
+                return list.join(";");
+            }
+            template <typename T, template <typename> class Container> Container<T> stringToPrimitive(QString const& c)
+            {
+                Container<T> result;
+                QStringList l = c.split(";");
+                for (QString s : l) {
+                    result.append(QVariant(s).value<T>());
+                }
+                return result;
+            }
+
+
         }
-        return map;
-    }
 
 
-    template <typename K, typename T> void registerQPair()
-    {
-        ORM_Config::addPairType(qMetaTypeId<K>(), qMetaTypeId<T>(),
+
+        template <typename T> void registerSequentialContainers()
+        {
+            qMetaTypeId<QList      <T>>() ? qMetaTypeId<QList      <T>>() : qRegisterMetaType<QList      <T>>();
+            qMetaTypeId<QVector    <T>>() ? qMetaTypeId<QVector    <T>>() : qRegisterMetaType<QVector    <T>>();
+            qMetaTypeId<std::list  <T>>() ? qMetaTypeId<std::list  <T>>() : qRegisterMetaType<std::list  <T>>();
+            qMetaTypeId<std::vector<T>>() ? qMetaTypeId<std::vector<T>>() : qRegisterMetaType<std::vector<T>>();
+            Config::addSeqContainerType(qMetaTypeId<QList      <T>>(),qMetaTypeId<T>());
+            Config::addSeqContainerType(qMetaTypeId<QVector    <T>>(),qMetaTypeId<T>());
+            Config::addSeqContainerType(qMetaTypeId<std::list  <T>>(),qMetaTypeId<T>());
+            Config::addSeqContainerType(qMetaTypeId<std::vector<T>>(),qMetaTypeId<T>());
+            QMetaType::registerConverter<QVariantList, QList      <T>>(&(Containers_Impl::    qListFromQVariantList<T>));
+            QMetaType::registerConverter<QVariantList, QVector    <T>>(&(Containers_Impl::  qVectorFromQVariantList<T>));
+            QMetaType::registerConverter<QVariantList, std::list  <T>>(&(Containers_Impl::  stdListFromQVariantList<T>));
+            QMetaType::registerConverter<QVariantList, std::vector<T>>(&(Containers_Impl::stdVectorFromQVariantList<T>));
+        }
+
+
+        template <typename K, typename T> void registerQPair()
+        {
+            Config::addPairType(qMetaTypeId<K>(), qMetaTypeId<T>(),
                                 qMetaTypeId<QPair <K,T>>() ? qMetaTypeId<QPair <K,T>>() : qRegisterMetaType<QPair <K,T>>());
-        QMetaType::registerConverter<QVariant, QPair<K,T>>(&(qPairFromQVariant<K,T>));
-        QMetaType::registerConverter<QVariantList, QPair<K,T>>(&(qPairFromQVariantList<K,T>));
-        QMetaType::registerConverter<ORM_QVariantPair, QPair<K,T>>(&(qPairFromPairStub<K,T>));
-        QMetaType::registerConverter<QPair<K,T>, ORM_QVariantPair>(&(toQPairStub<K,T>));
-    }
-    template <typename K, typename T> void registerQMap()
-    {
-        registerQPair<K,T>();
-
-        ORM_Config::addContainerPairType(qMetaTypeId<K>(), qMetaTypeId<T>(),
-                                         qMetaTypeId<QMap <K,T>>() ? qMetaTypeId<QMap <K,T>>() : qRegisterMetaType<QMap <K,T>>());
-        QMetaType::registerConverter<QMap<K,T>, QList<ORM_QVariantPair>>(&(qMapToPairListStub<K,T>));
-        QMetaType::registerConverter<QVariantMap            , QMap<K,T>>(&(qMapFromQVariantMap<K,T>));
-        QMetaType::registerConverter<QVariantList           , QMap<K,T>>(&(qMapFromQVariantList<K,T>));
-        QMetaType::registerConverter<QList <ORM_QVariantPair>, QMap<K,T>>(&(qMapFromPairListStub<K,T>));
-    }
-    template <typename K, typename T> void registerQHash()
-    {
-        registerQPair<K,T>();
-
-        ORM_Config::addContainerPairType(qMetaTypeId<K>(), qMetaTypeId<T>(),
-                                         qMetaTypeId<QHash <K,T>>() ? qMetaTypeId<QHash <K,T>>() : qRegisterMetaType<QHash <K,T>>());
-        QMetaType::registerConverter<QHash<K,T>, QList<ORM_QVariantPair>>(&(qHashToPairListStub<K,T>));
-        QMetaType::registerConverter<QVariantMap           , QHash<K,T>>(&(qHashFromQVariantHash<K,T>));
-        QMetaType::registerConverter<QVariantList          , QHash<K,T>>(&(qHashFromQVariantList<K,T>));
-        QMetaType::registerConverter<QList<ORM_QVariantPair>, QHash<K,T>>(&(qHashFromPairListStub<K,T>));
-    }
-
-    template <typename T, template <typename> class Container> QString primitiveToString(Container<T> const& c)
-    {
-        QStringList list;
-        for (T const& t : c) {
-            list << QString::number(t);
+            QMetaType::registerConverter<QVariant,         QPair<K,T>>(&(Containers_Impl::qPairFromQVariant    <K,T>));
+            QMetaType::registerConverter<QVariantList,     QPair<K,T>>(&(Containers_Impl::qPairFromQVariantList<K,T>));
+            QMetaType::registerConverter<ORM_QVariantPair, QPair<K,T>>(&(Containers_Impl::qPairFromPairStub    <K,T>));
+            QMetaType::registerConverter<QPair<K,T>, ORM_QVariantPair>(&(Containers_Impl::toQPairStub          <K,T>));
         }
-        return list.join(";");
-    }
-    template <typename T, template <typename> class Container> Container<T> stringToPrimitive(QString const& c)
-    {
-        Container<T> result;
-        QStringList l = c.split(";");
-        for (QString s : l) {
-            result.append(QVariant(s).value<T>());
+        template <template <typename,typename> class C, typename K, typename T> void registerAssociative()
+        {
+            registerQPair<K,T>();
+
+            Config::addContainerPairType(qMetaTypeId<K>(), qMetaTypeId<T>(),
+                                         qMetaTypeId<C<K,T>>() ? qMetaTypeId<C<K,T>>() : qRegisterMetaType<C<K,T>>());
+            QMetaType::registerConverter<C<K,T>,  QList<ORM_QVariantPair>>(&(Containers_Impl::qAssociativeToPairListStub          <K,T,C>));
+            QMetaType::registerConverter<QVariantMap             , C<K,T>>(&(Containers_Impl::qAssociativeFromQVariantAssociative <K,T,C>));
+            QMetaType::registerConverter<QVariantList            , C<K,T>>(&(Containers_Impl::qAssociativeFromQVariantList        <K,T,C>));
+            QMetaType::registerConverter<QList <ORM_QVariantPair>, C<K,T>>(&(Containers_Impl::qAssociativeFromPairListStub        <K,T,C>));
         }
-        return result;
-    }
 
+        template<template <typename> class Container> void registerPrimitiveTypeContainer() {
+            Config::addPrimitiveType(qRegisterMetaType<Container<         bool       >>());
+            Config::addPrimitiveType(qRegisterMetaType<Container<unsigned char       >>());
+            Config::addPrimitiveType(qRegisterMetaType<Container<  signed char       >>());
+            Config::addPrimitiveType(qRegisterMetaType<Container<         char       >>());
+            Config::addPrimitiveType(qRegisterMetaType<Container<unsigned short      >>());
+            Config::addPrimitiveType(qRegisterMetaType<Container<  signed short      >>());
+            Config::addPrimitiveType(qRegisterMetaType<Container<         short      >>());
+            Config::addPrimitiveType(qRegisterMetaType<Container<unsigned int        >>());
+            Config::addPrimitiveType(qRegisterMetaType<Container<  signed int        >>());
+            Config::addPrimitiveType(qRegisterMetaType<Container<         int        >>());
+            Config::addPrimitiveType(qRegisterMetaType<Container<unsigned long long  >>());
+            Config::addPrimitiveType(qRegisterMetaType<Container<  signed long long  >>());
+            Config::addPrimitiveType(qRegisterMetaType<Container<         long long  >>());
+            Config::addPrimitiveType(qRegisterMetaType<Container<         float      >>());
+            Config::addPrimitiveType(qRegisterMetaType<Container<         double     >>());
 
-    template<template <typename> class Container> void registerPrimitiveTypeContainer() {
-        ORM_Config::addPrimitiveType(qRegisterMetaType<Container<         bool       >>());
-        ORM_Config::addPrimitiveType(qRegisterMetaType<Container<unsigned char       >>());
-        ORM_Config::addPrimitiveType(qRegisterMetaType<Container<  signed char       >>());
-        ORM_Config::addPrimitiveType(qRegisterMetaType<Container<         char       >>());
-        ORM_Config::addPrimitiveType(qRegisterMetaType<Container<unsigned short      >>());
-        ORM_Config::addPrimitiveType(qRegisterMetaType<Container<  signed short      >>());
-        ORM_Config::addPrimitiveType(qRegisterMetaType<Container<         short      >>());
-        ORM_Config::addPrimitiveType(qRegisterMetaType<Container<unsigned int        >>());
-        ORM_Config::addPrimitiveType(qRegisterMetaType<Container<  signed int        >>());
-        ORM_Config::addPrimitiveType(qRegisterMetaType<Container<         int        >>());
-        ORM_Config::addPrimitiveType(qRegisterMetaType<Container<unsigned long long  >>());
-        ORM_Config::addPrimitiveType(qRegisterMetaType<Container<  signed long long  >>());
-        ORM_Config::addPrimitiveType(qRegisterMetaType<Container<         long long  >>());
-        ORM_Config::addPrimitiveType(qRegisterMetaType<Container<         float      >>());
-        ORM_Config::addPrimitiveType(qRegisterMetaType<Container<         double     >>());
+            QMetaType::registerConverter< Container<         bool       >, QString >(&(Containers_Impl::primitiveToString<          bool       , Container>));
+            QMetaType::registerConverter< Container<unsigned char       >, QString >(&(Containers_Impl::primitiveToString< unsigned char       , Container>));
+            QMetaType::registerConverter< Container<  signed char       >, QString >(&(Containers_Impl::primitiveToString<   signed char       , Container>));
+            QMetaType::registerConverter< Container<unsigned short      >, QString >(&(Containers_Impl::primitiveToString< unsigned short      , Container>));
+            QMetaType::registerConverter< Container<  signed short      >, QString >(&(Containers_Impl::primitiveToString<   signed short      , Container>));
+            QMetaType::registerConverter< Container<unsigned int        >, QString >(&(Containers_Impl::primitiveToString< unsigned int        , Container>));
+            QMetaType::registerConverter< Container<  signed int        >, QString >(&(Containers_Impl::primitiveToString<   signed int        , Container>));
+            QMetaType::registerConverter< Container<unsigned long long  >, QString >(&(Containers_Impl::primitiveToString< unsigned long long  , Container>));
+            QMetaType::registerConverter< Container<  signed long long  >, QString >(&(Containers_Impl::primitiveToString<   signed long long  , Container>));
+            QMetaType::registerConverter< Container<         float      >, QString >(&(Containers_Impl::primitiveToString<          float      , Container>));
+            QMetaType::registerConverter< Container<         double     >, QString >(&(Containers_Impl::primitiveToString<          double     , Container>));
 
-        QMetaType::registerConverter< Container<         bool       >, QString >(&(primitiveToString<          bool       , Container>));
-        QMetaType::registerConverter< Container<unsigned char       >, QString >(&(primitiveToString< unsigned char       , Container>));
-        QMetaType::registerConverter< Container<  signed char       >, QString >(&(primitiveToString<   signed char       , Container>));
-        QMetaType::registerConverter< Container<unsigned short      >, QString >(&(primitiveToString< unsigned short      , Container>));
-        QMetaType::registerConverter< Container<  signed short      >, QString >(&(primitiveToString<   signed short      , Container>));
-        QMetaType::registerConverter< Container<unsigned int        >, QString >(&(primitiveToString< unsigned int        , Container>));
-        QMetaType::registerConverter< Container<  signed int        >, QString >(&(primitiveToString<   signed int        , Container>));
-        QMetaType::registerConverter< Container<unsigned long long  >, QString >(&(primitiveToString< unsigned long long  , Container>));
-        QMetaType::registerConverter< Container<  signed long long  >, QString >(&(primitiveToString<   signed long long  , Container>));
-        QMetaType::registerConverter< Container<         float      >, QString >(&(primitiveToString<          float      , Container>));
-        QMetaType::registerConverter< Container<         double     >, QString >(&(primitiveToString<          double     , Container>));
-
-        QMetaType::registerConverter<QString, Container<         bool       >>(&(stringToPrimitive<          bool       , Container>));
-        QMetaType::registerConverter<QString, Container<unsigned char       >>(&(stringToPrimitive< unsigned char       , Container>));
-        QMetaType::registerConverter<QString, Container<  signed char       >>(&(stringToPrimitive<   signed char       , Container>));
-        QMetaType::registerConverter<QString, Container<unsigned short      >>(&(stringToPrimitive< unsigned short      , Container>));
-        QMetaType::registerConverter<QString, Container<  signed short      >>(&(stringToPrimitive<   signed short      , Container>));
-        QMetaType::registerConverter<QString, Container<unsigned int        >>(&(stringToPrimitive< unsigned int        , Container>));
-        QMetaType::registerConverter<QString, Container<  signed int        >>(&(stringToPrimitive<   signed int        , Container>));
-        QMetaType::registerConverter<QString, Container<unsigned long long  >>(&(stringToPrimitive< unsigned long long  , Container>));
-        QMetaType::registerConverter<QString, Container<  signed long long  >>(&(stringToPrimitive<   signed long long  , Container>));
-        QMetaType::registerConverter<QString, Container<         float      >>(&(stringToPrimitive<          float      , Container>));
-        QMetaType::registerConverter<QString, Container<         double     >>(&(stringToPrimitive<          double     , Container>));
-    }
-}
-uint qHash(orm_containers::ORM_QVariantPair const& variantPair) noexcept;
-Q_DECLARE_METATYPE(orm_containers::ORM_QVariantPair)
-
-namespace orm_qobjects {
-    typedef QObject* (*creators)();
-    template <typename T> QObject* creator() { return new T(); }
-    void addQObjectStub(int type, orm_qobjects::creators stub);
-    bool hasQObjectStub(int meta_type_id);
-}
-
-
-template <typename T> int ormRegisterType(const char * c)
-{
-    int type = qMetaTypeId<T>();
-    if (!type) {
-        if (c) {
-            type = qRegisterMetaType<T>(c);
-        }
-        else {
-            type = qRegisterMetaType<T>();
+            QMetaType::registerConverter<QString, Container<         bool       >>(&(Containers_Impl::stringToPrimitive<          bool       , Container>));
+            QMetaType::registerConverter<QString, Container<unsigned char       >>(&(Containers_Impl::stringToPrimitive< unsigned char       , Container>));
+            QMetaType::registerConverter<QString, Container<  signed char       >>(&(Containers_Impl::stringToPrimitive<   signed char       , Container>));
+            QMetaType::registerConverter<QString, Container<unsigned short      >>(&(Containers_Impl::stringToPrimitive< unsigned short      , Container>));
+            QMetaType::registerConverter<QString, Container<  signed short      >>(&(Containers_Impl::stringToPrimitive<   signed short      , Container>));
+            QMetaType::registerConverter<QString, Container<unsigned int        >>(&(Containers_Impl::stringToPrimitive< unsigned int        , Container>));
+            QMetaType::registerConverter<QString, Container<  signed int        >>(&(Containers_Impl::stringToPrimitive<   signed int        , Container>));
+            QMetaType::registerConverter<QString, Container<unsigned long long  >>(&(Containers_Impl::stringToPrimitive< unsigned long long  , Container>));
+            QMetaType::registerConverter<QString, Container<  signed long long  >>(&(Containers_Impl::stringToPrimitive<   signed long long  , Container>));
+            QMetaType::registerConverter<QString, Container<         float      >>(&(Containers_Impl::stringToPrimitive<          float      , Container>));
+            QMetaType::registerConverter<QString, Container<         double     >>(&(Containers_Impl::stringToPrimitive<          double     , Container>));
         }
     }
-    ORM_Config::addPointerStub(orm_pointers::registerTypePointers<T>());
-    orm_containers::registerSequentialContainers<T>();
-    return type;
-}
 
-template <typename T> int ormRegisterTypeEx(const char * c)
-{
-    int type = ormRegisterType<T>(c);
-    ORM_Config::addPointerStub(orm_pointers::registerTypeSmartPointers<T>());
-    return type;
-}
+    namespace Impl
+    {
+        template <typename T> static typename std::enable_if<!std::is_base_of<QObject,T>::value, int>::type Register(const char * c)
+        {
+            int type = qMetaTypeId<T>();
+            if (!type) {
+                if (c) {
+                    type = qRegisterMetaType<T>(c);
+                }
+                else {
+                    type = qRegisterMetaType<T>();
+                }
+            }
+            Config::addPointerStub(orm::Pointers::registerTypePointers<T>());
+            orm::Containers::registerSequentialContainers<T>();
+            return type;
+        }
+        template <typename T> static typename std::enable_if< std::is_base_of<QObject,T>::value, int>::type Register(const char *)
+        {
+            Q_ASSERT(T::staticMetaObject.constructorCount());
+            Config::addPointerStub(orm::Pointers::registerTypePointers<T>());
+            return qMetaTypeId<QObject*>();
+        }
+        template <typename T> static typename std::enable_if<!std::is_base_of<QObject,T>::value, int>::type RegisterEx(const char * c)
+        {
+            int type = Register<T>(c);
+            Config::addPointerStub(orm::Pointers::registerTypeSmartPointers<T>());
+            return type;
+        }
+        template <typename T> static typename std::enable_if< std::is_base_of<QObject,T>::value, int>::type RegisterEx(const char *)
+        {
+            Register<T>(nullptr);
+            Config::addPointerStub(orm::Pointers::registerTypeSmartPointers<T>());
+            return qMetaTypeId<QObject*>();
+        }
+        void     registerPrimitiveTypeContainers();
 
-template <typename T> int ormRegisterQObject(const char * c)
-{
-    if (orm_qobjects::hasQObjectStub(qMetaTypeId<T*>())) {
-        return qMetaTypeId<T*>();
+
+
+
+        bool       withRowid     (const QMetaObject &meta);
+        bool       isPrimaryKey  (const QMetaObject & obj, int property);
+        bool       isRowID       (const QString & property);
+
+        bool       isEnumeration            (int meta_type_id);
+        bool       isGadget                 (int meta_type_id);
+        bool       isQObject                (int meta_type_id);
+        bool       isQObject                (QMetaObject const& meta);
+        bool       isPointer                (int meta_type_id);
+        bool       isWeakPointer            (int meta_type_id);
+        bool       isIgnored                (int meta_type_id);
+        bool       isPrimitive              (int meta_type_id);
+        bool       isPrimitiveType          (int meta_type_id);
+        bool       isPrimitiveString        (int meta_type_id);
+        bool       isPrimitiveRaw           (int meta_type_id);
+        bool       isSequentialContainer    (int meta_type_id);
+        bool       isPair                   (int meta_type_id);
+        bool       isAssociativeContainer   (int meta_type_id);
+        bool       isTypeForTable           (int meta_type_id);
+
+        bool       shouldSkipMeta           (QMetaProperty const& property, QObject const* object = nullptr);
+        bool       shouldSkipReadMeta       (QMetaProperty const& property, QObject const* object = nullptr);
+        bool       shouldSkipWriteMeta      (QMetaProperty const& property, QObject const* object = nullptr);
+
+        int        typeToValueType                       (int meta_type_id); // T* -> T
+        int        getSequentialContainerStoredType      (int meta_type_id); // std::list<T> -> T
+        int        getAssociativeContainerStoredKeyType  (int meta_type_id); // std::map<K,T> -> K
+        int        getAssociativeContainerStoredValueType(int meta_type_id); // std::map<K,T> -> T
+        int        getAssociativeContainerStoredType     (int meta_type_id, int property); // property: 0 - key, 1 - value, 2 - orm_rowid
+
+        int        actualMetaTypeIDOnce                  (int meta_type_id);
+        int        actualMetaTypeID                      (int meta_type_id); // QSharedPointer<T>* -> T or T*
+        QList<int> actualMetaTypeIDQueue                 (int meta_type_id);
+
+        QMetaObject const* meta_object(int meta_type_id);
+
+        bool       write            (int meta_type_id, int property_index, QVariant      & writeInto, QVariant const& value);
+        QVariant   read             (int meta_type_id, int property_index, QVariant const&  readFrom);
+        QVariant   makeStoreQVariant(int meta_type_id);
+
+        template <typename Foo>
+        void for_each_property(int meta_type_id, Foo foo) {
+            if (isSequentialContainer(meta_type_id)) {
+                foo(getSequentialContainerStoredType(meta_type_id));
+                return;
+            }
+            if (isAssociativeContainer(meta_type_id) || isPair(meta_type_id)) {
+                foo(getAssociativeContainerStoredKeyType(meta_type_id));
+                foo(getAssociativeContainerStoredValueType(meta_type_id));
+                return;
+            }
+            foo(meta_type_id);
+        }
+        template <typename Foo>
+        void for_each(int meta_type_id, QVariant & value, Foo foo) {
+            if (isSequentialContainer(meta_type_id)) {
+                if (value.isValid()) {
+                    QSequentialIterable sequentialIterable = value.value<QSequentialIterable>();
+                    int index = 0;
+                    for (QVariant listElement : sequentialIterable) {
+                        foo(getSequentialContainerStoredType(meta_type_id), listElement, index++);
+                    }
+                }
+                return;
+            }
+            if (isAssociativeContainer(meta_type_id) || isPair(meta_type_id)) {
+                if (value.canConvert<orm::Containers::ORM_QVariantPair>()) {
+                    QVariant var = value;
+                    var.convert(qMetaTypeId<orm::Containers::ORM_QVariantPair>());
+                    foo(meta_type_id, var, 0);
+                    return;
+                }
+                if (value.canConvert<QList<orm::Containers::ORM_QVariantPair>>()) {
+                    QList<orm::Containers::ORM_QVariantPair> pairList = value.value<QList<orm::Containers::ORM_QVariantPair>>();
+                    int index = 0;
+                    for (orm::Containers::ORM_QVariantPair & ormPairValue : pairList) {
+                        QVariant variantPair = QVariant::fromValue(ormPairValue);
+                        foo(meta_type_id, variantPair, index++);
+                    }
+                    return;
+                }
+            }
+            if (isPointer(meta_type_id)) {
+                if (value.value<orm::Pointers::VoidPointer>().data == nullptr) {
+                    return;
+                }
+            }
+            foo(meta_type_id, value, 0);
+        }
+
     }
 
-    int type = qMetaTypeId<T*>() ? qMetaTypeId<T*>() : qRegisterMetaType<T*>(c);
-    orm_qobjects::addQObjectStub(type, &orm_qobjects::creator<T>);
-    return type;
+
+
+    template <typename T>  int  Register  (const char * c)
+    {
+        return Impl::Register<T>(c);
+    }
+    template <typename T>  int  RegisterEx  (const char * c)
+    {
+        return Impl::RegisterEx<T>(c);
+    }
 }
+class QDebug;
+QDebug operator<< (QDebug debug, orm::ORM::TableEntry const& te);
+QDebug operator<< (QDebug dbg, orm::Config const& config);
+QDebug operator<< (QDebug dbg, orm::Containers::ORM_QVariantPair const& pair);
+QDebug operator<< (QDebug dbg, QList<orm::Containers::ORM_QVariantPair> const& pair);
+
+
+uint qHash(orm::Containers::ORM_QVariantPair const& variantPair) Q_DECL_NOEXCEPT;
+Q_DECLARE_METATYPE(orm::Containers::ORM_QVariantPair)
+Q_DECLARE_METATYPE(orm::Pointers::NewStub)
+Q_DECLARE_METATYPE(orm::Pointers::VoidPointer)
 
 #endif // ORM_H

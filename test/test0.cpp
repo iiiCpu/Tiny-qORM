@@ -1,63 +1,67 @@
 #include "test0.h"
 
-#include "orm.h"
+#include "sqliteorm.h"
+
+#include <QDebug>
+#include <QCoreApplication>
 
 bool Test_QtStructures::operator !=(const Test_QtStructures &o) const {
     //return
-    bool ref = false;
-    if (m_QChar                 != o.m_QChar                  ) { qDebug() << m_QChar                 << o.m_QChar                 ; ref = true; }
-    if (m_QString               != o.m_QString                ) { qDebug() << m_QString               << o.m_QString               ; ref = true; }
-    if (m_QStringList           != o.m_QStringList            ) { qDebug() << m_QStringList           << o.m_QStringList           ; ref = true; }
-    if (m_QByteArray            != o.m_QByteArray             ) { qDebug() << m_QByteArray            << o.m_QByteArray            ; ref = true; }
-    if (m_QBitArray             != o.m_QBitArray              ) { qDebug() << m_QBitArray             << o.m_QBitArray             ; ref = true; }
-    if (m_QDate                 != o.m_QDate                  ) { qDebug() << m_QDate                 << o.m_QDate                 ; ref = true; }
-    if (m_QTime                 != o.m_QTime                  ) { qDebug() << m_QTime                 << o.m_QTime                 ; ref = true; }
-    if (m_QDateTime             != o.m_QDateTime              ) { qDebug() << m_QDateTime             << o.m_QDateTime             ; ref = true; }
-    if (m_QUrl                  != o.m_QUrl                   ) { qDebug() << m_QUrl                  << o.m_QUrl                  ; ref = true; }
-    if (m_QLocale               != o.m_QLocale                ) { qDebug() << m_QLocale               << o.m_QLocale               ; ref = true; }
-    if (m_QRect                 != o.m_QRect                  ) { qDebug() << m_QRect                 << o.m_QRect                 ; ref = true; }
-    if (m_QRectF                != o.m_QRectF                 ) { qDebug() << m_QRectF                << o.m_QRectF                ; ref = true; }
-    if (m_QSize                 != o.m_QSize                  ) { qDebug() << m_QSize                 << o.m_QSize                 ; ref = true; }
-    if (m_QSizeF                != o.m_QSizeF                 ) { qDebug() << m_QSizeF                << o.m_QSizeF                ; ref = true; }
-    if (m_QLine                 != o.m_QLine                  ) { qDebug() << m_QLine                 << o.m_QLine                 ; ref = true; }
-    if (m_QLineF                != o.m_QLineF                 ) { qDebug() << m_QLineF                << o.m_QLineF                ; ref = true; }
-    if (m_QPoint                != o.m_QPoint                 ) { qDebug() << m_QPoint                << o.m_QPoint                ; ref = true; }
-    if (m_QPointF               != o.m_QPointF                ) { qDebug() << m_QPointF               << o.m_QPointF               ; ref = true; }
-    if (m_QRegExp               != o.m_QRegExp                ) { qDebug() << m_QRegExp               << o.m_QRegExp               ; ref = true; }
-    if (m_QEasingCurve          != o.m_QEasingCurve           ) { qDebug() << m_QEasingCurve          << o.m_QEasingCurve          ; ref = true; }
-    if (m_QUuid                 != o.m_QUuid                  ) { qDebug() << m_QUuid                 << o.m_QUuid                 ; ref = true; }
-    if (m_QModelIndex           != o.m_QModelIndex            ) { qDebug() << m_QModelIndex           << o.m_QModelIndex           ; ref = true; }
-    if (m_QRegularExpression    != o.m_QRegularExpression     ) { qDebug() << m_QRegularExpression    << o.m_QRegularExpression    ; ref = true; }
-    if (m_QJsonValue            != o.m_QJsonValue             ) { qDebug() << m_QJsonValue            << o.m_QJsonValue            ; ref = true; }
-    if (m_QJsonObject           != o.m_QJsonObject            ) { qDebug() << m_QJsonObject           << o.m_QJsonObject           ; ref = true; }
-    if (m_QJsonArray            != o.m_QJsonArray             ) { qDebug() << m_QJsonArray            << o.m_QJsonArray            ; ref = true; }
-    if (m_QJsonDocument         != o.m_QJsonDocument          ) { qDebug() << m_QJsonDocument         << o.m_QJsonDocument         ; ref = true; }
-    if (m_QPersistentModelIndex != o.m_QPersistentModelIndex  ) { qDebug() << m_QPersistentModelIndex << o.m_QPersistentModelIndex ; ref = true; }
-    if (m_QByteArrayList        != o.m_QByteArrayList         ) { qDebug() << m_QByteArrayList        << o.m_QByteArrayList        ; ref = true; }
-    if (m_QFont                 != o.m_QFont                  ) { qDebug() << m_QFont                 << o.m_QFont                 ; ref = true; }
-    if (m_QPixmap               != o.m_QPixmap                ) { qDebug() << m_QPixmap               << o.m_QPixmap               ; ref = true; }
-    if (m_QBrush                != o.m_QBrush                 ) { qDebug() << m_QBrush                << o.m_QBrush                ; ref = true; }
-    if (m_QColor                != o.m_QColor                 ) { qDebug() << m_QColor                << o.m_QColor                ; ref = true; }
-    if (m_QPalette              != o.m_QPalette               ) { qDebug() << m_QPalette              << o.m_QPalette              ; ref = true; }
-    //if (m_QIcon                 != o.m_QIcon                  ) { qDebug() << m_QIcon                 << o.m_QIcon                 ; ref = true; } // QIcon have no operator!=
-    if (m_QImage                != o.m_QImage                 ) { qDebug() << m_QImage                << o.m_QImage                ; ref = true; }
-    if (m_QPolygon              != o.m_QPolygon               ) { qDebug() << m_QPolygon              << o.m_QPolygon              ; ref = true; }
-    if (m_QRegion               != o.m_QRegion                ) { qDebug() << m_QRegion               << o.m_QRegion               ; ref = true; }
-    if (m_QBitmap               != o.m_QBitmap                ) { qDebug() << m_QBitmap               << o.m_QBitmap               ; ref = true; }
-    if (m_QCursor               != o.m_QCursor                ) { qDebug() << m_QCursor               << o.m_QCursor               ; ref = true; }
-    if (m_QKeySequence          != o.m_QKeySequence           ) { qDebug() << m_QKeySequence          << o.m_QKeySequence          ; ref = true; }
-    if (m_QPen                  != o.m_QPen                   ) { qDebug() << m_QPen                  << o.m_QPen                  ; ref = true; }
-    if (m_QTextLength           != o.m_QTextLength            ) { qDebug() << m_QTextLength           << o.m_QTextLength           ; ref = true; }
-    if (m_QTextFormat           != o.m_QTextFormat            ) { qDebug() << m_QTextFormat           << o.m_QTextFormat           ; ref = true; }
-    if (m_QMatrix               != o.m_QMatrix                ) { qDebug() << m_QMatrix               << o.m_QMatrix               ; ref = true; }
-    if (m_QTransform            != o.m_QTransform             ) { qDebug() << m_QTransform            << o.m_QTransform            ; ref = true; }
-    if (m_QMatrix4x4            != o.m_QMatrix4x4             ) { qDebug() << m_QMatrix4x4            << o.m_QMatrix4x4            ; ref = true; }
-    if (m_QVector2D             != o.m_QVector2D              ) { qDebug() << m_QVector2D             << o.m_QVector2D             ; ref = true; }
-    if (m_QVector3D             != o.m_QVector3D              ) { qDebug() << m_QVector3D             << o.m_QVector3D             ; ref = true; }
-    if (m_QVector4D             != o.m_QVector4D              ) { qDebug() << m_QVector4D             << o.m_QVector4D             ; ref = true; }
-    if (m_QQuaternion           != o.m_QQuaternion            ) { qDebug() << m_QQuaternion           << o.m_QQuaternion           ; ref = true; }
-    if (m_QPolygonF             != o.m_QPolygonF              ) { qDebug() << m_QPolygonF             << o.m_QPolygonF             ; ref = true; }
-    if (m_QSizePolicy           != o.m_QSizePolicy            ) { qDebug() << m_QSizePolicy           << o.m_QSizePolicy           ; ref = true; }
+    bool ref = true;
+    if (m_QChar                 == o.m_QChar                  ) { qDebug() << m_QChar                 << o.m_QChar                 ; ref = false; }
+    if (m_QString               == o.m_QString                ) { qDebug() << m_QString               << o.m_QString               ; ref = false; }
+    if (m_QStringList           == o.m_QStringList            ) { qDebug() << m_QStringList           << o.m_QStringList           ; ref = false; }
+    if (m_QByteArray            == o.m_QByteArray             ) { qDebug() << m_QByteArray            << o.m_QByteArray            ; ref = false; }
+    if (m_QBitArray             == o.m_QBitArray              ) { qDebug() << m_QBitArray             << o.m_QBitArray             ; ref = false; }
+    if (m_QDate                 == o.m_QDate                  ) { qDebug() << m_QDate                 << o.m_QDate                 ; ref = false; }
+    if (m_QTime                 == o.m_QTime                  ) { qDebug() << m_QTime                 << o.m_QTime                 ; ref = false; }
+    if (m_QDateTime             == o.m_QDateTime              ) { qDebug() << m_QDateTime             << o.m_QDateTime             ; ref = false; }
+    if (m_QUrl                  == o.m_QUrl                   ) { qDebug() << m_QUrl                  << o.m_QUrl                  ; ref = false; }
+    if (m_QLocale               == o.m_QLocale                ) { qDebug() << m_QLocale               << o.m_QLocale               ; ref = false; }
+    if (m_QRect                 == o.m_QRect                  ) { qDebug() << m_QRect                 << o.m_QRect                 ; ref = false; }
+    if (m_QRectF                == o.m_QRectF                 ) { qDebug() << m_QRectF                << o.m_QRectF                ; ref = false; }
+    if (m_QSize                 == o.m_QSize                  ) { qDebug() << m_QSize                 << o.m_QSize                 ; ref = false; }
+    if (m_QSizeF                == o.m_QSizeF                 ) { qDebug() << m_QSizeF                << o.m_QSizeF                ; ref = false; }
+    if (m_QLine                 == o.m_QLine                  ) { qDebug() << m_QLine                 << o.m_QLine                 ; ref = false; }
+    if (m_QLineF                == o.m_QLineF                 ) { qDebug() << m_QLineF                << o.m_QLineF                ; ref = false; }
+    if (m_QPoint                == o.m_QPoint                 ) { qDebug() << m_QPoint                << o.m_QPoint                ; ref = false; }
+    if (m_QPointF               == o.m_QPointF                ) { qDebug() << m_QPointF               << o.m_QPointF               ; ref = false; }
+    if (m_QRegExp               == o.m_QRegExp                ) { qDebug() << m_QRegExp               << o.m_QRegExp               ; ref = false; }
+    if (m_QEasingCurve          == o.m_QEasingCurve           ) { qDebug() << m_QEasingCurve          << o.m_QEasingCurve          ; ref = false; }
+    if (m_QUuid                 == o.m_QUuid                  ) { qDebug() << m_QUuid                 << o.m_QUuid                 ; ref = false; }
+    if (m_QModelIndex           == o.m_QModelIndex            ) { qDebug() << m_QModelIndex           << o.m_QModelIndex           ; ref = false; }
+    if (m_QRegularExpression    == o.m_QRegularExpression     ) { qDebug() << m_QRegularExpression    << o.m_QRegularExpression    ; ref = false; }
+    if (m_QJsonValue            == o.m_QJsonValue             ) { qDebug() << m_QJsonValue            << o.m_QJsonValue            ; ref = false; }
+    if (m_QJsonObject           == o.m_QJsonObject            ) { qDebug() << m_QJsonObject           << o.m_QJsonObject           ; ref = false; }
+    if (m_QJsonArray            == o.m_QJsonArray             ) { qDebug() << m_QJsonArray            << o.m_QJsonArray            ; ref = false; }
+    if (m_QJsonDocument         == o.m_QJsonDocument          ) { qDebug() << m_QJsonDocument         << o.m_QJsonDocument         ; ref = false; }
+    if (m_QPersistentModelIndex == o.m_QPersistentModelIndex  ) { qDebug() << m_QPersistentModelIndex << o.m_QPersistentModelIndex ; ref = false; }
+    if (m_QByteArrayList        == o.m_QByteArrayList         ) { qDebug() << m_QByteArrayList        << o.m_QByteArrayList        ; ref = false; }
+    if (m_QFont                 == o.m_QFont                  ) { qDebug() << m_QFont                 << o.m_QFont                 ; ref = false; }
+  //if (m_QPixmap               == o.m_QPixmap                ) { qDebug() << m_QPixmap               << o.m_QPixmap               ; ref = false; }
+    if (m_QBrush                == o.m_QBrush                 ) { qDebug() << m_QBrush                << o.m_QBrush                ; ref = false; }
+    if (m_QColor                == o.m_QColor                 ) { qDebug() << m_QColor                << o.m_QColor                ; ref = false; }
+    if (m_QPalette              == o.m_QPalette               ) { qDebug() << m_QPalette              << o.m_QPalette              ; ref = false; }
+  //if (m_QIcon                 == o.m_QIcon                  ) { qDebug() << m_QIcon                 << o.m_QIcon                 ; ref = false; } // QIcon have no operator!=
+    if (m_QImage                == o.m_QImage                 ) { qDebug() << m_QImage                << o.m_QImage                ; ref = false; }
+    if (m_QPolygon              == o.m_QPolygon               ) { qDebug() << m_QPolygon              << o.m_QPolygon              ; ref = false; }
+    if (m_QRegion               == o.m_QRegion                ) { qDebug() << m_QRegion               << o.m_QRegion               ; ref = false; }
+  //if (m_QBitmap               == o.m_QBitmap                ) { qDebug() << m_QBitmap               << o.m_QBitmap               ; ref = false; }
+  //if (m_QCursor               == o.m_QCursor                ) { qDebug() << m_QCursor               << o.m_QCursor               ; ref = false; }
+    if (m_QKeySequence          == o.m_QKeySequence           ) { qDebug() << m_QKeySequence          << o.m_QKeySequence          ; ref = false; }
+    if (m_QPen                  == o.m_QPen                   ) { qDebug() << m_QPen                  << o.m_QPen                  ; ref = false; }
+    if (m_QTextLength           == o.m_QTextLength            ) { qDebug() << m_QTextLength           << o.m_QTextLength           ; ref = false; }
+    if (m_QTextFormat           == o.m_QTextFormat            ) { qDebug() << m_QTextFormat           << o.m_QTextFormat           ; ref = false; }
+    if (m_QMatrix               == o.m_QMatrix                ) { qDebug() << m_QMatrix               << o.m_QMatrix               ; ref = false; }
+    if (m_QTransform            == o.m_QTransform             ) { qDebug() << m_QTransform            << o.m_QTransform            ; ref = false; }
+    if (m_QMatrix4x4            == o.m_QMatrix4x4             ) { qDebug() << m_QMatrix4x4            << o.m_QMatrix4x4            ; ref = false; }
+    if (m_QVector2D             == o.m_QVector2D              ) { qDebug() << m_QVector2D             << o.m_QVector2D             ; ref = false; }
+    if (m_QVector3D             == o.m_QVector3D              ) { qDebug() << m_QVector3D             << o.m_QVector3D             ; ref = false; }
+    if (m_QVector4D             == o.m_QVector4D              ) { qDebug() << m_QVector4D             << o.m_QVector4D             ; ref = false; }
+    if (m_QQuaternion           == o.m_QQuaternion            ) { qDebug() << m_QQuaternion           << o.m_QQuaternion           ; ref = false; }
+    if (m_QPolygonF             == o.m_QPolygonF              ) { qDebug() << m_QPolygonF             << o.m_QPolygonF             ; ref = false; }
+    if (m_QSizePolicy           == o.m_QSizePolicy            ) { qDebug() << m_QSizePolicy           << o.m_QSizePolicy           ; ref = false; }
+  //if (m_QObject               == o.m_QObject                ) { qDebug() << m_QObject               << o.m_QObject               ; ref = false; }
     return ref;
 }
 
@@ -94,7 +98,7 @@ bool Test_QtStructures::operator ==(const Test_QtStructures &o) const
     if (m_QPersistentModelIndex != o.m_QPersistentModelIndex  ) { qDebug() << m_QPersistentModelIndex << o.m_QPersistentModelIndex ; ref = false; }
     if (m_QByteArrayList        != o.m_QByteArrayList         ) { qDebug() << m_QByteArrayList        << o.m_QByteArrayList        ; ref = false; }
     if (m_QFont                 != o.m_QFont                  ) { qDebug() << m_QFont                 << o.m_QFont                 ; ref = false; }
-    if (m_QPixmap               != o.m_QPixmap                ) { qDebug() << m_QPixmap               << o.m_QPixmap               ; ref = false; }
+  //if (m_QPixmap               != o.m_QPixmap                ) { qDebug() << m_QPixmap               << o.m_QPixmap               ; ref = false; }
     if (m_QBrush                != o.m_QBrush                 ) { qDebug() << m_QBrush                << o.m_QBrush                ; ref = false; }
     if (m_QColor                != o.m_QColor                 ) { qDebug() << m_QColor                << o.m_QColor                ; ref = false; }
     if (m_QPalette              != o.m_QPalette               ) { qDebug() << m_QPalette              << o.m_QPalette              ; ref = false; }
@@ -102,8 +106,8 @@ bool Test_QtStructures::operator ==(const Test_QtStructures &o) const
     if (m_QImage                != o.m_QImage                 ) { qDebug() << m_QImage                << o.m_QImage                ; ref = false; }
     if (m_QPolygon              != o.m_QPolygon               ) { qDebug() << m_QPolygon              << o.m_QPolygon              ; ref = false; }
     if (m_QRegion               != o.m_QRegion                ) { qDebug() << m_QRegion               << o.m_QRegion               ; ref = false; }
-    if (m_QBitmap               != o.m_QBitmap                ) { qDebug() << m_QBitmap               << o.m_QBitmap               ; ref = false; }
-    if (m_QCursor               != o.m_QCursor                ) { qDebug() << m_QCursor               << o.m_QCursor               ; ref = false; }
+  //if (m_QBitmap               != o.m_QBitmap                ) { qDebug() << m_QBitmap               << o.m_QBitmap               ; ref = false; }
+  //if (m_QCursor               != o.m_QCursor                ) { qDebug() << m_QCursor               << o.m_QCursor               ; ref = false; }
     if (m_QKeySequence          != o.m_QKeySequence           ) { qDebug() << m_QKeySequence          << o.m_QKeySequence          ; ref = false; }
     if (m_QPen                  != o.m_QPen                   ) { qDebug() << m_QPen                  << o.m_QPen                  ; ref = false; }
     if (m_QTextLength           != o.m_QTextLength            ) { qDebug() << m_QTextLength           << o.m_QTextLength           ; ref = false; }
@@ -117,6 +121,7 @@ bool Test_QtStructures::operator ==(const Test_QtStructures &o) const
     if (m_QQuaternion           != o.m_QQuaternion            ) { qDebug() << m_QQuaternion           << o.m_QQuaternion           ; ref = false; }
     if (m_QPolygonF             != o.m_QPolygonF              ) { qDebug() << m_QPolygonF             << o.m_QPolygonF             ; ref = false; }
     if (m_QSizePolicy           != o.m_QSizePolicy            ) { qDebug() << m_QSizePolicy           << o.m_QSizePolicy           ; ref = false; }
+  //if (m_QObject               != o.m_QObject                ) { qDebug() << m_QObject               << o.m_QObject               ; ref = false; }
     return ref;
 }
 
@@ -174,6 +179,7 @@ Test_QtStructures &Test_QtStructures::operator =(const Test_QtStructures &o) {
     m_QQuaternion           = o.m_QQuaternion            ;
     m_QPolygonF             = o.m_QPolygonF              ;
     m_QSizePolicy           = o.m_QSizePolicy            ;
+    m_QObject               = o.m_QObject                ;
     return *this;
 }
 
@@ -236,9 +242,10 @@ Test_QtStructures::Test_QtStructures(const Test_QtStructures &o) {
     m_QQuaternion           = o.m_QQuaternion            ;
     m_QPolygonF             = o.m_QPolygonF              ;
     m_QSizePolicy           = o.m_QSizePolicy            ;
+    m_QObject               = o.m_QObject                ;
 }
 
-QDebug& operator<<(QDebug& dbg, const Test_QtStructures &t)
+QDebug operator<<(QDebug dbg, Test_QtStructures const& t)
 {
     QDebugStateSaver svr(dbg);
     dbg           << "Test_QtStructures:"      << "\n";
@@ -295,6 +302,7 @@ QDebug& operator<<(QDebug& dbg, const Test_QtStructures &t)
     dbg << "    " << t.m_QQuaternion           << "\n";
     dbg << "    " << t.m_QPolygonF             << "\n";
     dbg << "    " << t.m_QSizePolicy           << "\n";
+    dbg << "    " << t.m_QObject               << "\n";
     return dbg;
 }
 
@@ -304,8 +312,9 @@ QDebug& operator<<(QDebug& dbg, const Test_QtStructures &t)
 void test_QtStructures()
 {
     qDebug() << "Qt structures serialization test:";
-    ormRegisterType<Test_QtStructures>();
-    ORM_Config::addPrimitiveRawType<QRect>();
+    orm::Register<Test_QtStructures>();
+    orm::Register<QObject>();
+    orm::Config::addPrimitiveRawType<QRect>();
 
     Test_QtStructures s;
 
@@ -362,14 +371,21 @@ void test_QtStructures()
     s.m_QQuaternion           = QQuaternion               (0.5, 7, 7, 7);
     s.m_QPolygonF             = QPolygonF                 (s.m_QPolygon);
     s.m_QSizePolicy           = QSizePolicy               (QSizePolicy::Expanding, QSizePolicy::Expanding);
-    qDebug() << s;
+    s.m_QObject.reset(new QObject(QCoreApplication::instance()));
+    s.m_QObject->setObjectName("Test object");
 
-    ORM orm;
+    orm::SQLiteORM orm;
     orm.drop<Test_QtStructures>();
     orm.create<Test_QtStructures>();
     orm.insert(s);
     QList<Test_QtStructures> mine = orm.select<Test_QtStructures>();
-    qDebug() << mine;
-    qDebug() << (s == mine.first());
-    qDebug() << "End of test.";
+    if (mine.size() < 1) {
+        qDebug() << "Test 0: select is empty.";
+        return;
+    }
+    if (s != mine.first()) {
+        qDebug() << "Test 0: result is not equal.";
+        return;
+    }
+    qDebug() << "Test 0: success.";
 }

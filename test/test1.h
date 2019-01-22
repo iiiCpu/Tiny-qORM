@@ -15,11 +15,13 @@ namespace Test1
     public:
         int m_i;
         U(int i = 38):m_i(i){}
+        U(U const& i ):m_i(i.m_i){}
+        U& operator=(U const& i ){ m_i = i.m_i; return *this; }
     };
 }
 Q_DECLARE_METATYPE(Test1::U)
 
-QDebug& operator<<(QDebug & dbg, Test1::U const& ur);
+QDebug operator<<(QDebug dbg, Test1::U const& ur);
 bool operator!=(Test1::U const& u1, Test1::U const& u2);
 bool operator==(Test1::U const& u1, Test1::U const& u2);
 bool operator< (Test1::U const& u1, Test1::U const& u2);

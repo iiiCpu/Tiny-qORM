@@ -6,15 +6,17 @@ win32-msvc* {
 }
 
 g++ {
-    CONFIG += c++14
+    CONFIG += c++11
 }
 INCLUDEPATH += $$PWD
 DEPENDPATH += $$PWD
 
 SOURCES += \
-    $$PWD/orm.cpp
+    $$PWD/orm.cpp \
+    $$PWD/sqliteorm.cpp
 
 HEADERS +=     \
-           $$PWD/orm_def.h \
+    $$PWD/orm_def.h \
     $$PWD/orm.h \
-    $$PWD/orm_templates.h
+    $$PWD/orm_templates.h \
+    $$PWD/sqliteorm.h

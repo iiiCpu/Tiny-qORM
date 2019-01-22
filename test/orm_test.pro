@@ -8,7 +8,7 @@ QT       += core gui sql
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-CONFIG += c++14
+CONFIG += c++11
 
 TARGET = orm_test
 TEMPLATE = app
@@ -25,29 +25,40 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 include(../ORM/ORM.pri)
-#include(E:/Downloads/orm_test/orm_test/ORM/ORM.pri)
+include(../sqlite/sqlite.pri)
 
+CONFIG += enable_leak_detector
 
-INCLUDEPATH += "C:/Program Files (x86)/Visual Leak Detector/include"
+msvc*:{
+    enable_leak_detector:{
+        DEFINES += VLD
+        INCLUDEPATH += "C:/Program Files (x86)/Visual Leak Detector/include"
 
-LIBS += -L"C:/Program Files (x86)/Visual Leak Detector/lib/Win32/" -lvld
-PRE_TARGETDEPS += "C:/Program Files (x86)/Visual Leak Detector/lib/Win32/vld.lib"
+        contains(QMAKE_HOST.arch, x86):{
+            LIBS += -L"C:/Program Files (x86)/Visual Leak Detector/lib/Win32/" -lvld
+            PRE_TARGETDEPS += "C:/Program Files (x86)/Visual Leak Detector/lib/Win32/vld.lib"
+        }
 
+        contains(QMAKE_HOST.arch, x86_64):{
+            LIBS += -L"C:/Program Files (x86)/Visual Leak Detector/lib/Win64/" -lvld
+            PRE_TARGETDEPS += "C:/Program Files (x86)/Visual Leak Detector/lib/Win64/vld.lib"
+        }
+    }
+}
 
 SOURCES += \
-        main.cpp \
+    main.cpp  \
     test0.cpp \
     test1.cpp \
     test3.cpp \
-    test2.cpp
+    test2.cpp \
+    test4.cpp
 
 HEADERS += \
+    test0.h \
     test1.h \
     test2.h \
-    test0.h \
-    test0.h \
-    test1.h \
     test3.h \
-    test2.h
+    test4.h
 
 FORMS +=

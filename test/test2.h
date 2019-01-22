@@ -2,6 +2,13 @@
 #define TEST2_H
 
 #include "orm_def.h"
+#include <QObject>
+#include <QString>
+#include <QMap>
+
+#include <QSharedPointer>
+#include <memory>
+
 class QDebug;
 
 void test2();
@@ -11,6 +18,7 @@ namespace Test2
     struct Mom : public ORMValue
     {
         Q_GADGET
+        ORM_CLASSINFO_TABLE_NAME(Mama)
         Q_PROPERTY(QString name MEMBER m_name)
         Q_PROPERTY(She     is   MEMBER m_is  )
     public:
@@ -41,6 +49,8 @@ namespace Test2
     struct Car : public ORMValue
     {
         Q_GADGET
+        ORM_CLASSINFO_TABLE_NAME(Car)
+        ORM_CLASSINFO_TABLE_NAME_NO_PARENT
         Q_PROPERTY(double gas MEMBER m_gas)
     public:
         double m_gas;
@@ -94,22 +104,26 @@ namespace Test2
         Brother& operator = (Brother const& no)      ;
     };
 
-    struct Ur : public ORMValue
+    struct Ur : public QObject
     {
-        Q_GADGET
-        Q_PROPERTY(QString               name MEMBER m_name)
-        Q_PROPERTY(Test2::Mom            mom  MEMBER m_mama)
-        Q_PROPERTY(Test2::Dad            dad  MEMBER m_papa)
-        Q_PROPERTY(QList<Test2::Brother> bros MEMBER m_bros)
+        Q_OBJECT
+        ORM_CLASSINFO_TABLE_NAME(Ur)
+        Q_PROPERTY(long long                 orm_rowid MEMBER m_id   )
+        Q_PROPERTY(QString                   name      MEMBER m_name )
+        Q_PROPERTY(Test2::Mom                mom       MEMBER m_mama )
+        Q_PROPERTY(Test2::Dad                dad       MEMBER m_papa )
+        Q_PROPERTY(QList<Test2::Brother>     bros      MEMBER m_bros )
+        Q_PROPERTY(QMap<int, Test2::Brother> boros     MEMBER m_boros)
     public:
-        QString        m_name;
-        Mom            m_mama;
-        Dad            m_papa;
-        QList<Brother> m_bros;
+        long long                m_id   ;
+        QString                  m_name ;
+        Mom                      m_mama ;
+        Dad                      m_papa ;
+        QList<Brother>           m_bros ;
+        QMap<int,Test2::Brother> m_boros;
 
     public:
-        Ur ();
-        Ur (Ur const& no);
+        Q_INVOKABLE Ur (QObject * parent = nullptr);
         ~Ur();
         bool operator !=(Ur const& no) const;
         bool operator ==(Ur const& no) const;
@@ -118,15 +132,20 @@ namespace Test2
 }
 
 ORM_DECLARE_METATYPE(Test2::Mom    )
+ORM_DECLARE_METATYPE_QT_SMARTPOINTERS(Test2::Mom    )
+ORM_DECLARE_METATYPE_STD_SMARTPOINTERS(Test2::Mom    )
 ORM_DECLARE_METATYPE(Test2::Car    )
 ORM_DECLARE_METATYPE(Test2::Dad    )
 ORM_DECLARE_METATYPE(Test2::Brother)
-ORM_DECLARE_METATYPE(Test2::Ur     )
+//ORM_DECLARE_METATYPE(Test2::Ur     )
 
-QDebug& operator<<(QDebug& dbg, Test2::Dad     const& ur);
-QDebug& operator<<(QDebug& dbg, Test2::Mom     const& ur);
-QDebug& operator<<(QDebug& dbg, Test2::Car     const& ur);
-QDebug& operator<<(QDebug& dbg, Test2::Brother const& ur);
-QDebug& operator<<(QDebug& dbg, Test2::Ur      const& no);
+QDebug operator<<(QDebug dbg, Test2::Dad     const& ur);
+QDebug operator<<(QDebug dbg, Test2::Mom     const& ur);
+QDebug operator<<(QDebug dbg, Test2::Car     const& ur);
+QDebug operator<<(QDebug dbg, Test2::Brother const& ur);
+QDebug operator<<(QDebug dbg, QMap<int, Test2::Brother> const& ur);
+QDebug operator<<(QDebug dbg, Test2::Ur      const& no);
+QDebug operator<<(QDebug dbg, Test2::Car     const* ur);
+QDebug operator<<(QDebug dbg, Test2::Ur      const* no);
 
 #endif // TEST2_H

@@ -3,8 +3,7 @@
 
 #include <QMetaType>
 #include "orm_def.h"
-
-class QDebug;
+#include <QDebug>
 
 void test_QtStructures();
 
@@ -88,14 +87,14 @@ struct Test_QtStructures : public ORMValue
     Q_PROPERTY(QUuid                     m_QUuid                 MEMBER m_QUuid                 )
     Q_PROPERTY(QModelIndex               m_QModelIndex           MEMBER m_QModelIndex           )
     Q_PROPERTY(QRegularExpression        m_QRegularExpression    MEMBER m_QRegularExpression    )
-    Q_PROPERTY(QJsonValue                m_QJsonValue            MEMBER m_QJsonValue            )
-    Q_PROPERTY(QJsonObject               m_QJsonObject           MEMBER m_QJsonObject           )
-    Q_PROPERTY(QJsonArray                m_QJsonArray            MEMBER m_QJsonArray            )
-    Q_PROPERTY(QJsonDocument             m_QJsonDocument         MEMBER m_QJsonDocument         )
-    Q_PROPERTY(QPersistentModelIndex     m_QPersistentModelIndex MEMBER m_QPersistentModelIndex )
+    //Q_PROPERTY(QJsonValue                m_QJsonValue            MEMBER m_QJsonValue            )
+    //Q_PROPERTY(QJsonObject               m_QJsonObject           MEMBER m_QJsonObject           )
+    //Q_PROPERTY(QJsonArray                m_QJsonArray            MEMBER m_QJsonArray            )
+    //Q_PROPERTY(QJsonDocument             m_QJsonDocument         MEMBER m_QJsonDocument         )
+    //Q_PROPERTY(QPersistentModelIndex     m_QPersistentModelIndex MEMBER m_QPersistentModelIndex )
     Q_PROPERTY(QByteArrayList            m_QByteArrayList        MEMBER m_QByteArrayList        )
     Q_PROPERTY(QFont                     m_QFont                 MEMBER m_QFont                 )
-    Q_PROPERTY(QPixmap                   m_QPixmap               MEMBER m_QPixmap               )
+  //Q_PROPERTY(QPixmap                   m_QPixmap               MEMBER m_QPixmap               )
     Q_PROPERTY(QBrush                    m_QBrush                MEMBER m_QBrush                )
     Q_PROPERTY(QColor                    m_QColor                MEMBER m_QColor                )
     Q_PROPERTY(QPalette                  m_QPalette              MEMBER m_QPalette              )
@@ -103,8 +102,8 @@ struct Test_QtStructures : public ORMValue
     Q_PROPERTY(QImage                    m_QImage                MEMBER m_QImage                )
     Q_PROPERTY(QPolygon                  m_QPolygon              MEMBER m_QPolygon              )
     Q_PROPERTY(QRegion                   m_QRegion               MEMBER m_QRegion               )
-    Q_PROPERTY(QBitmap                   m_QBitmap               MEMBER m_QBitmap               )
-    Q_PROPERTY(QCursor                   m_QCursor               MEMBER m_QCursor               )
+  //Q_PROPERTY(QBitmap                   m_QBitmap               MEMBER m_QBitmap               )
+  //Q_PROPERTY(QCursor                   m_QCursor               MEMBER m_QCursor               )
     Q_PROPERTY(QKeySequence              m_QKeySequence          MEMBER m_QKeySequence          )
     Q_PROPERTY(QPen                      m_QPen                  MEMBER m_QPen                  )
     Q_PROPERTY(QTextLength               m_QTextLength           MEMBER m_QTextLength           )
@@ -118,6 +117,7 @@ struct Test_QtStructures : public ORMValue
     Q_PROPERTY(QQuaternion               m_QQuaternion           MEMBER m_QQuaternion           )
     Q_PROPERTY(QPolygonF                 m_QPolygonF             MEMBER m_QPolygonF             )
     Q_PROPERTY(QSizePolicy               m_QSizePolicy           MEMBER m_QSizePolicy           )
+    Q_PROPERTY(QSharedPointer<QObject>   m_QObject               MEMBER m_QObject               )
 public:
     QChar                     m_QChar                 ;
     QString                   m_QString               ;
@@ -172,6 +172,7 @@ public:
     QQuaternion               m_QQuaternion           ;
     QPolygonF                 m_QPolygonF             ;
     QSizePolicy               m_QSizePolicy           ;
+    QSharedPointer<QObject>   m_QObject               ;
 public:
     Test_QtStructures();
     Test_QtStructures(Test_QtStructures const& o);
@@ -182,6 +183,6 @@ public:
 };
 ORM_DECLARE_METATYPE(Test_QtStructures)
 
-QDebug& operator<<(QDebug& dbg, Test_QtStructures const& t);
+QDebug operator<<(QDebug dbg, Test_QtStructures const& t);
 
 #endif // TEST0_H
