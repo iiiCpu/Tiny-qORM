@@ -16,17 +16,62 @@
 
 QDebug operator << (QDebug debug, orm::ORM::TableEntry const& te)
 {
-    debug << endl
+    debug << Qt::endl
           << te.orig_meta_type_id << "(" << te.norm_meta_type_id << ") " << te.field_name
           << te.property_name << " (" << te.property_index
           << ") isField=" << te.is_field << " isObject=" << te.is_QObject
           << te.is_primary_key << "  " << te.properties.size() << " properties {";
     for (auto const&i : te.properties) {
-        debug << i << endl;
+        debug << i << Qt::endl;
     }
     debug << "}";
     return debug;
 }
+
+QVariant make_variant(int type_id, void const* init)
+{
+#if (QT_VERSION_MAJOR < 6)
+    return QVariant(type_id, init);
+#else
+    return QVariant(QMetaType(type_id), init);
+#endif
+}
+
+QMetaObject const* metaObject(int type_id)
+{
+#if (QT_VERSION_MAJOR < 6)
+    return QMetaType::metaObjectForType(type_id);
+#else
+    return QMetaType(type_id).metaObject();
+#endif
+}
+
+QString metaTypeName(int i)
+{
+#if (QT_VERSION_MAJOR < 6)
+    return QMetaType::typeName(i);
+#else
+    return QMetaType(i).name();
+#endif
+};
+
+bool variantCanConvert(QVariant const& v, int t)
+{
+#if (QT_VERSION_MAJOR < 6)
+    return v.canConvert(t);
+#else
+    return v.canConvert(QMetaType(t));
+#endif
+};
+
+bool variantConvert(QVariant & v, int t)
+{
+#if (QT_VERSION_MAJOR < 6)
+    return v.convert(t);
+#else
+    return v.convert(QMetaType(t));
+#endif
+};
 
 namespace orm
 {
@@ -184,15 +229,15 @@ namespace orm
 #else
         bool isQObject(int meta_type_id)
         {
-            const QMetaObject * meta = QMetaType::metaObjectForType(meta_type_id);
+            const QMetaObject * meta = metaObject(meta_type_id);
             if (meta) {
-                return meta->inherits(QMetaType::metaObjectForType(QMetaType::QObjectStar));
+                return meta->inherits(metaObject(QMetaType::QObjectStar));
             }
             return false;
         }
         bool isQObject(QMetaObject const& meta)
         {
-            return meta.inherits(QMetaType::metaObjectForType(QMetaType::QObjectStar));
+            return meta.inherits(metaObject(QMetaType::QObjectStar));
         }
 #endif
 
@@ -219,14 +264,14 @@ namespace orm
                     isPair(meta_type_id);
         }
 
-        bool shouldSkipReadMeta(QMetaProperty const& property, QObject const* object)
+        bool shouldSkipReadMeta(QMetaProperty const& property, [[maybe_unused]] QObject const* object)
         {
             return !property.isReadable();// || !property.isStored(object);
         }
 
-        bool shouldSkipWriteMeta(QMetaProperty const& property, QObject const* object)
+        bool shouldSkipWriteMeta(QMetaProperty const& property, [[maybe_unused]] QObject const* object)
         {
-            return !property.isWritable() || !property.isStored(object);
+            return !property.isWritable() || !property.isStored();
         }
         bool shouldSkipMeta(QMetaProperty const& property, QObject const* object)
         {
@@ -401,11 +446,11 @@ namespace orm
 
         QMetaObject const* meta_object(int meta_type_id)
         {
-            QMetaObject const* meta_ptr = QMetaType::metaObjectForType(meta_type_id);
+            QMetaObject const* meta_ptr = metaObject(meta_type_id);
             if (meta_ptr) {
                 return meta_ptr;
             }
-            meta_ptr = QMetaType::metaObjectForType(orm::Impl::actualMetaTypeID(meta_type_id));
+            meta_ptr = metaObject(orm::Impl::actualMetaTypeID(meta_type_id));
             if (meta_ptr) {
                 return meta_ptr;
             }
@@ -454,10 +499,10 @@ namespace orm
             }
             if (        obj->property(property_index).userType() != val.userType()
                     &&  val.isValid()
-                    && !val.canConvert(obj->property(property_index).userType())) {
-                qDebug() << "Can not convert " << QMetaType::typeName(val.userType()) << "(" << val.userType() << ") to "
-                         << QMetaType::typeName(obj->property(property_index).userType()) << "(" << obj->property(property_index).userType() << ") for "
-                         << QMetaType::typeName(meta_id) << "::" << obj->property(property_index).name() << " (" << meta_id << ")";
+                    && !variantCanConvert(val, obj->property(property_index).userType())) {
+                qDebug() << "Can not convert " << metaTypeName(val.userType()) << "(" << val.userType() << ") to "
+                         << metaTypeName(obj->property(property_index).userType()) << "(" << obj->property(property_index).userType() << ") for "
+                         << metaTypeName(meta_id) << "::" << obj->property(property_index).name() << " (" << meta_id << ")";
                 return false;
             }
             if (Impl::isQObject(meta_id)) {
@@ -468,7 +513,7 @@ namespace orm
                 return obj->property(property_index).write(object, val);
             }
             else {
-                if (writeInto.canConvert(qMetaTypeId<orm::Pointers::VoidPointer>())) {
+                if (variantCanConvert(writeInto, qMetaTypeId<orm::Pointers::VoidPointer>())) {
                     return obj->property(property_index).writeOnGadget(writeInto.value<orm::Pointers::VoidPointer>().data, val);
                 }
                 else {
@@ -493,7 +538,7 @@ namespace orm
                 if (Impl::isQObject(meta_id)) {
                     QObject const* object = readFrom.value<QObject*>();
                     if (!object) {
-                        qDebug() << "Error converting data" << meta_id << QMetaType::typeName(meta_id) << property_index << obj->property(property_index).name() << readFrom;
+                        qDebug() << "Error converting data" << meta_id << metaTypeName(meta_id) << property_index << obj->property(property_index).name() << readFrom;
                         return QVariant();
                     }
                     if (!Impl::shouldSkipReadMeta(obj->property(property_index), object)) {
@@ -501,7 +546,7 @@ namespace orm
                     }
                 }
                 else {
-                    if (readFrom.canConvert(qMetaTypeId<orm::Pointers::VoidPointer>())) {
+                    if (variantCanConvert(readFrom, qMetaTypeId<orm::Pointers::VoidPointer>())) {
                         result = obj->property(property_index).readOnGadget(readFrom.value<orm::Pointers::VoidPointer>().data);
                     }
                     else {
@@ -513,11 +558,11 @@ namespace orm
                 }
 
                 if (Impl::isPrimitiveString(obj->property(property_index).userType())) {
-                    result.convert(qMetaTypeId<QString>());
+                    variantConvert(result, qMetaTypeId<QString>());
                 }
                 if (Impl::isPrimitiveRaw(obj->property(property_index).userType())) {
                     QByteArray array;
-                    QDataStream stream(&array, QIODevice::ReadWrite);
+                    QDataStream stream(&array, QDataStream::ReadWrite);
                     stream << result;
                     result = array;
                 }
@@ -528,7 +573,7 @@ namespace orm
         QVariant makeStoreQVariantExact(int metatype)
         {
             QVariant o;
-            QMetaObject const* meta = QMetaType::metaObjectForType(metatype);
+            QMetaObject const* meta = metaObject(metatype);
             if (meta) {
                 if (Impl::isQObject(*meta)) {
                     QObject * obj = meta->newInstance();
@@ -538,7 +583,7 @@ namespace orm
                     return QVariant::fromValue(obj);
                 }
                 if (!Impl::isQObject(*meta)) {
-                    return QVariant(metatype, nullptr);
+                    return make_variant(metatype, nullptr);
                 }
             }
             else {
@@ -550,7 +595,7 @@ namespace orm
                 }
                 orm::Pointers::PointerStub stub = orm::Config::getPointerStub(metatype);
                 int type = stub.pT;
-                meta = QMetaType::metaObjectForType(type);
+                meta = metaObject(type);
                 if (meta) {
                     if (Impl::isQObject(*meta)) {
                         QObject * obj = meta->newInstance();
@@ -564,16 +609,16 @@ namespace orm
                     }
                     else {
                         o = QVariant::fromValue(orm::Pointers::NewStub());
-                        o.convert(stub.pT);
+                        variantConvert(o, stub.pT);
                     }
                 }
                 else {
-                    return QVariant(metatype, nullptr);
+                    return make_variant(metatype, nullptr);
                 }
             }
             if (o.isValid()) {
-                o.convert(qMetaTypeId<orm::Pointers::VoidPointer>());
-                o.convert(metatype);
+                variantConvert(o, qMetaTypeId<orm::Pointers::VoidPointer>());
+                variantConvert(o, metatype);
                 return o;
             }
             return QVariant();
@@ -588,10 +633,10 @@ namespace orm
                 return makeStoreQVariant(Impl::getSequentialContainerStoredType(metatype));
             }
             if (!Impl::isPointer(metatype)) {
-                return QVariant(metatype, nullptr);
+                return make_variant(metatype, nullptr);
             }
             orm::Pointers::PointerStub stub = orm::Config::getPointerStub(metatype);
-            QMetaObject const* meta = QMetaType::metaObjectForType(stub.pT);
+            QMetaObject const* meta = metaObject(stub.pT);
             if (meta && Impl::isQObject(*meta)) {
                     QObject * obj = meta->newInstance();
 #ifdef QT_DEBUG
@@ -601,7 +646,7 @@ namespace orm
             }
             if (stub.pT) {
                 QVariant o = QVariant::fromValue(orm::Pointers::NewStub());
-                o.convert(stub.pT);
+                variantConvert(o, stub.pT);
                 return o;
             }
             return QVariant();
@@ -687,9 +732,17 @@ namespace orm
 
     void Config::addPrimitiveStringType(int meta_type_id)
     {
+#if (QT_VERSION_MAJOR < 6)
         Q_ASSERT_X( QMetaType::hasRegisteredConverterFunction(meta_type_id, qMetaTypeId<QString>()) &&
                     QMetaType::hasRegisteredConverterFunction(qMetaTypeId<QString>(), meta_type_id),
                     "addPrimitiveStringType", "Needs registred converters T->QString->T");
+#else
+        QMetaType type(meta_type_id);
+        QMetaType str = QMetaType::fromType<QString>();
+        Q_ASSERT_X( QMetaType::hasRegisteredConverterFunction(type, str) &&
+                    QMetaType::hasRegisteredConverterFunction(str, type),
+                   "addPrimitiveStringType", "Needs registred converters T->QString->T");
+#endif
         Impl::primitiveStringContainers << meta_type_id;
     }
 
@@ -774,7 +827,6 @@ namespace orm
             Config::addPrimitiveRawType<QLineF>();
             Config::addPrimitiveRawType<QPoint>();
             Config::addPrimitiveRawType<QPointF>();
-            Config::addPrimitiveRawType<QRegExp>();
             Config::addPrimitiveRawType<QEasingCurve>();
             Config::addPrimitiveType<QUuid>();
             Config::addPrimitiveRawType<QVariant>();
@@ -805,7 +857,6 @@ namespace orm
             Config::addPrimitiveRawType<QPen>();
             Config::addPrimitiveRawType<QTextLength>();
             Config::addPrimitiveRawType<QTextFormat>();
-            Config::addPrimitiveRawType<QMatrix>();
             Config::addPrimitiveRawType<QTransform>();
             Config::addPrimitiveRawType<QMatrix4x4>();
             Config::addPrimitiveRawType<QVector2D>();
@@ -814,10 +865,18 @@ namespace orm
             Config::addPrimitiveRawType<QQuaternion>();
             Config::addPrimitiveRawType<QPolygonF>();
             Config::addPrimitiveRawType<QSizePolicy>();
+#if (QT_VERSION_MAJOR < 6)
+            Config::addPrimitiveRawType<QRegExp>();
+            Config::addPrimitiveRawType<QMatrix>();
+#else
+#endif
 
             qRegisterMetaType<orm::Pointers::VoidPointer>("orm::Pointers::VoidPointer");
+#if (QT_VERSION_MAJOR < 6)
             QMetaType::registerDebugStreamOperator<orm::Containers::ORM_QVariantPair>();
             QMetaType::registerDebugStreamOperator<QList<orm::Containers::ORM_QVariantPair>>();
+#else
+#endif
 
             orm::Containers::registerPrimitiveTypeContainer<QList>();
             orm::Containers::registerPrimitiveTypeContainer<QVector>();
@@ -842,7 +901,7 @@ namespace orm
 
     void     ORM::id_create(int meta_type_id)
     {
-        const QMetaObject * meta = QMetaType::metaObjectForType(meta_type_id);
+        const QMetaObject * meta = metaObject(meta_type_id);
         if (meta) {
             ORM::TableEntry te = ORM_Impl::queryData(this, meta_type_id);
             ORM::ORM_Impl::meta_create(this, te);
@@ -850,7 +909,7 @@ namespace orm
     }
     QVariant ORM::id_select(int meta_type_id)
     {
-        const QMetaObject * meta = QMetaType::metaObjectForType(meta_type_id);
+        const QMetaObject * meta = metaObject(meta_type_id);
         if (meta) {
             ORM::TableEntry te = ORM_Impl::queryData(this, meta_type_id);
             return ORM::ORM_Impl::meta_select(this, te);
@@ -860,7 +919,7 @@ namespace orm
 
     QVariant ORM::id_select_where(int meta_type_id, const QVariantMap & wheres)
     {
-        const QMetaObject * meta = QMetaType::metaObjectForType(meta_type_id);
+        const QMetaObject * meta = metaObject(meta_type_id);
         if (meta) {
             //return ORM::ORM_Impl::meta_select_where(this, meta_type_id, wheres);
         }
@@ -869,7 +928,7 @@ namespace orm
 
     QVariant ORM::id_get(int meta_type_id, long long id)
     {
-        const QMetaObject * meta = QMetaType::metaObjectForType(meta_type_id);
+        const QMetaObject * meta = metaObject(meta_type_id);
         if (meta) {
             //return ORM::ORM_Impl::meta_get(this, meta_type_id, id);
         }
@@ -877,7 +936,7 @@ namespace orm
     }
     void     ORM::id_insert(int meta_type_id, QVariant &value)
     {
-        const QMetaObject * meta = QMetaType::metaObjectForType(meta_type_id);
+        const QMetaObject * meta = metaObject(meta_type_id);
         if (meta) {
             ORM::TableEntry te = ORM_Impl::queryData(this, meta_type_id);
             ORM::ORM_Impl::meta_insert(this, te, value);
@@ -885,7 +944,7 @@ namespace orm
     }
     void     ORM::id_delete (int meta_type_id, QVariant &value)
     {
-        const QMetaObject * meta = QMetaType::metaObjectForType(meta_type_id);
+        const QMetaObject * meta = metaObject(meta_type_id);
         if (meta) {
             ORM::TableEntry te = ORM_Impl::queryData(this, meta_type_id);
             ORM::ORM_Impl::meta_delete(this, te, value);
@@ -893,7 +952,7 @@ namespace orm
     }
     void     ORM::id_update(int meta_type_id, QVariant &value)
     {
-        const QMetaObject * meta = QMetaType::metaObjectForType(meta_type_id);
+        const QMetaObject * meta = metaObject(meta_type_id);
         if (meta) {
             ORM::TableEntry te = ORM_Impl::queryData(this, meta_type_id);
             ORM::ORM_Impl::meta_update(this, te, value);
@@ -901,7 +960,7 @@ namespace orm
     }
     void     ORM::id_drop  (int meta_type_id)
     {
-        const QMetaObject * meta = QMetaType::metaObjectForType(meta_type_id);
+        const QMetaObject * meta = metaObject(meta_type_id);
         if (meta) {
             ORM::TableEntry te = ORM_Impl::queryData(this, meta_type_id);
             ORM::ORM_Impl::meta_drop(this, te);
@@ -970,7 +1029,7 @@ namespace orm
         if (meta_ptr) {
             QString custom = Impl::customTableName(*meta_ptr);
             if (custom.isEmpty()) {
-                custom = QMetaType::typeName(me.norm_meta_type_id);
+                custom = metaTypeName(me.norm_meta_type_id);
             }
             if (!Impl::dontUseParentName(*meta_ptr)) {
                 if (orm) {
@@ -1004,11 +1063,11 @@ namespace orm
         }
         else {
             if (parent) {
-                me.field_name = orm->generate_table_name(parent->field_name, me.property_name, QMetaType::typeName(me.norm_meta_type_id));
+                me.field_name = orm->generate_table_name(parent->field_name, me.property_name, metaTypeName(me.norm_meta_type_id));
             }
             else {
-                me.field_name = orm->generate_table_name(QString(), QString(), QMetaType::typeName(me.norm_meta_type_id));
-                me.property_name = QMetaType::typeName(me.orig_meta_type_id);
+                me.field_name = orm->generate_table_name(QString(), QString(), metaTypeName(me.norm_meta_type_id));
+                me.property_name = metaTypeName(me.orig_meta_type_id);
                 me.property_index = -1;
             }
             if (orm::Impl::isPair(me.orig_meta_type_id) || orm::Impl::isAssociativeContainer(me.orig_meta_type_id)) {
@@ -1132,14 +1191,14 @@ namespace orm
                     if (i.is_orm_row_id) {
                         QVariant temp = Impl::read(parent->orig_meta_type_id, i.property_index, parentVal);
                         if (Impl::isPrimitiveString(i.orig_meta_type_id)) {
-                            temp.convert(qMetaTypeId<QString>());
+                            variantConvert(temp, qMetaTypeId<QString>());
                         }
                         if (Impl::isPrimitiveRaw(i.orig_meta_type_id)) {
                             QByteArray array;
-                            QDataStream stream(&array, QIODevice::ReadWrite);
+                            QDataStream stream(&array, QDataStream::ReadWrite);
                             stream << temp;
                             temp = array;
-                            //w.convert(qMetaTypeId<QByteArray>());
+                            //w.variantConvert(qMetaTypeId<QByteArray>());
                         }
                         query.bindValue(QString(":parent_") + i.field_name, temp);
                     }
@@ -1150,14 +1209,14 @@ namespace orm
                     if (i.is_primary_key) {
                         QVariant temp = Impl::read(parent->orig_meta_type_id, i.property_index, parentVal);
                         if (Impl::isPrimitiveString(i.orig_meta_type_id)) {
-                            temp.convert(qMetaTypeId<QString>());
+                            variantConvert(temp, qMetaTypeId<QString>());
                         }
                         if (Impl::isPrimitiveRaw(i.orig_meta_type_id)) {
                             QByteArray array;
-                            QDataStream stream(&array, QIODevice::ReadWrite);
+                            QDataStream stream(&array, QDataStream::ReadWrite);
                             stream << temp;
                             temp = array;
-                            //w.convert(qMetaTypeId<QByteArray>());
+                            //w.variantConvert(qMetaTypeId<QByteArray>());
                         }
                         query.bindValue(QString(":parent_") + i.field_name, temp);
                     }
@@ -1170,14 +1229,14 @@ namespace orm
             }
             QVariant temp = Impl::read(entry.orig_meta_type_id, i.property_index, value);
             if (Impl::isPrimitiveString(i.orig_meta_type_id)) {
-                temp.convert(qMetaTypeId<QString>());
+                variantConvert(temp, qMetaTypeId<QString>());
             }
             if (Impl::isPrimitiveRaw(i.orig_meta_type_id)) {
                 QByteArray array;
-                QDataStream stream(&array, QIODevice::ReadWrite);
+                QDataStream stream(&array, QDataStream::ReadWrite);
                 stream << temp;
                 temp = array;
-                //w.convert(qMetaTypeId<QByteArray>());
+                //w.variantConvert(qMetaTypeId<QByteArray>());
             }
             query.bindValue(QString(":") + i.field_name, temp);
         }
@@ -1186,7 +1245,11 @@ namespace orm
             qDebug() << entry.orig_meta_type_id << entry.field_name;
             qDebug() << query.lastError().databaseText() << query.lastError().driverText();
             qDebug() << query.executedQuery();
+#if (QT_VERSION_MAJOR < 6)
             qDebug() << query.boundValues().keys();
+#else
+            qDebug() << query.boundValueNames();
+#endif
             qDebug() << query.boundValues();
         }
         long long ormRowid = orm->get_last_inserted_rowid(query);
@@ -1208,7 +1271,7 @@ namespace orm
                 continue;
             }
             QVariant temp = Impl::read(entry.orig_meta_type_id, i.property_index, value);
-            orm::Impl::for_each(i.orig_meta_type_id, temp, [&orm, &i, &entry, &value](int meta_type_id, QVariant & var, int index) {
+            orm::Impl::for_each(i.orig_meta_type_id, temp, [&orm, &i, &entry, &value]([[maybe_unused]] int meta_type_id, QVariant & var, [[maybe_unused]] int index) {
                 meta_insert(orm, i, var, &entry, value);
             });
         }
@@ -1236,14 +1299,14 @@ namespace orm
                     if (i.is_orm_row_id) {
                         QVariant temp = Impl::read(parent->orig_meta_type_id, i.property_index, parentVal);
                         if (Impl::isPrimitiveString(i.orig_meta_type_id)) {
-                            temp.convert(qMetaTypeId<QString>());
+                            variantConvert(temp, qMetaTypeId<QString>());
                         }
                         if (Impl::isPrimitiveRaw(i.orig_meta_type_id)) {
                             QByteArray array;
-                            QDataStream stream(&array, QIODevice::ReadWrite);
+                            QDataStream stream(&array, QDataStream::ReadWrite);
                             stream << temp;
                             temp = array;
-                            //w.convert(qMetaTypeId<QByteArray>());
+                            //w.variantConvert(qMetaTypeId<QByteArray>());
                         }
                         query.bindValue(QString(":parent_") + i.field_name, temp);
                     }
@@ -1254,14 +1317,14 @@ namespace orm
                     if (i.is_primary_key) {
                         QVariant temp = Impl::read(parent->orig_meta_type_id, i.property_index, parentVal);
                         if (Impl::isPrimitiveString(i.orig_meta_type_id)) {
-                            temp.convert(qMetaTypeId<QString>());
+                            variantConvert(temp, qMetaTypeId<QString>());
                         }
                         if (Impl::isPrimitiveRaw(i.orig_meta_type_id)) {
                             QByteArray array;
-                            QDataStream stream(&array, QIODevice::ReadWrite);
+                            QDataStream stream(&array, QDataStream::ReadWrite);
                             stream << temp;
                             temp = array;
-                            //w.convert(qMetaTypeId<QByteArray>());
+                            //w.variantConvert(qMetaTypeId<QByteArray>());
                         }
                         query.bindValue(QString(":parent_") + i.field_name, temp);
                     }
@@ -1292,15 +1355,15 @@ namespace orm
                 if (i.is_field) {
                     QVariant queryValue = query.value(i.field_name);
                     if (Impl::isEnumeration(i.orig_meta_type_id)) {
-                        queryValue.convert(i.orig_meta_type_id);
+                        variantConvert(queryValue, i.orig_meta_type_id);
                     }
                     if (Impl::isPrimitiveString(i.orig_meta_type_id)) {
-                        queryValue.convert(i.orig_meta_type_id);
+                        variantConvert(queryValue, i.orig_meta_type_id);
                     }
                     if (Impl::isPrimitiveRaw(i.orig_meta_type_id)) {
                         QVariant temp;
                         QByteArray array = queryValue.toByteArray();
-                        QDataStream stream(&array,QIODevice::ReadWrite);
+                        QDataStream stream(&array, QDataStream::ReadWrite);
                         stream >> temp;
                         queryValue = temp;
                     }
@@ -1353,14 +1416,14 @@ namespace orm
                     if (i.is_orm_row_id) {
                         QVariant temp = Impl::read(parent->orig_meta_type_id, i.property_index, parentVal);
                         if (Impl::isPrimitiveString(i.orig_meta_type_id)) {
-                            temp.convert(qMetaTypeId<QString>());
+                            variantConvert(temp, qMetaTypeId<QString>());
                         }
                         if (Impl::isPrimitiveRaw(i.orig_meta_type_id)) {
                             QByteArray array;
-                            QDataStream stream(&array, QIODevice::ReadWrite);
+                            QDataStream stream(&array, QDataStream::ReadWrite);
                             stream << temp;
                             temp = array;
-                            //w.convert(qMetaTypeId<QByteArray>());
+                            //w.variantConvert(qMetaTypeId<QByteArray>());
                         }
                         query.bindValue(QString(":parent_") + i.field_name, temp);
                     }
@@ -1371,14 +1434,14 @@ namespace orm
                     if (i.is_primary_key) {
                         QVariant temp = Impl::read(parent->orig_meta_type_id, i.property_index, parentVal);
                         if (Impl::isPrimitiveString(i.orig_meta_type_id)) {
-                            temp.convert(qMetaTypeId<QString>());
+                            variantConvert(temp, qMetaTypeId<QString>());
                         }
                         if (Impl::isPrimitiveRaw(i.orig_meta_type_id)) {
                             QByteArray array;
-                            QDataStream stream(&array, QIODevice::ReadWrite);
+                            QDataStream stream(&array, QDataStream::ReadWrite);
                             stream << temp;
                             temp = array;
-                            //w.convert(qMetaTypeId<QByteArray>());
+                            //w.variantConvert(qMetaTypeId<QByteArray>());
                         }
                         query.bindValue(QString(":parent_") + i.field_name, temp);
                     }
@@ -1391,14 +1454,14 @@ namespace orm
             }
             QVariant temp = Impl::read(entry.orig_meta_type_id, i.property_index, value);
             if (Impl::isPrimitiveString(i.orig_meta_type_id)) {
-                temp.convert(qMetaTypeId<QString>());
+                variantConvert(temp, qMetaTypeId<QString>());
             }
             if (Impl::isPrimitiveRaw(i.orig_meta_type_id)) {
                 QByteArray array;
-                QDataStream stream(&array, QIODevice::ReadWrite);
+                QDataStream stream(&array, QDataStream::ReadWrite);
                 stream << temp;
                 temp = array;
-                //w.convert(qMetaTypeId<QByteArray>());
+                //w.variantConvert(qMetaTypeId<QByteArray>());
             }
             query.bindValue(QString(":") + i.field_name, temp);
         }
@@ -1416,7 +1479,7 @@ namespace orm
                 continue;
             }
             QVariant temp = Impl::read(entry.orig_meta_type_id, i.property_index, value);
-            orm::Impl::for_each(i.orig_meta_type_id, temp, [&orm, &i, &entry, &value](int meta_type_id, QVariant & var, int index){
+            orm::Impl::for_each(i.orig_meta_type_id, temp, [&orm, &i, &entry, &value]([[maybe_unused]] int meta_type_id, QVariant & var, [[maybe_unused]] int index){
                 meta_update(orm, i, var, &entry, value);
             });
         }
@@ -1444,7 +1507,7 @@ namespace orm
                 continue;
             }
             QVariant temp = Impl::read(entry.orig_meta_type_id, i.property_index, value);
-            orm::Impl::for_each(i.orig_meta_type_id, temp, [&orm, &i, &entry, &value](int meta_type_id, QVariant & var, int index){
+            orm::Impl::for_each(i.orig_meta_type_id, temp, [&orm, &i, &entry, &value]([[maybe_unused]] int meta_type_id, QVariant & var, [[maybe_unused]] int index){
                 meta_delete(orm, i, var, &entry, value);
             });
         }
@@ -1461,14 +1524,14 @@ namespace orm
                     if (i.is_orm_row_id) {
                         QVariant temp = Impl::read(parent->orig_meta_type_id, i.property_index, parentVal);
                         if (Impl::isPrimitiveString(i.orig_meta_type_id)) {
-                            temp.convert(qMetaTypeId<QString>());
+                            variantConvert(temp, qMetaTypeId<QString>());
                         }
                         if (Impl::isPrimitiveRaw(i.orig_meta_type_id)) {
                             QByteArray array;
-                            QDataStream stream(&array, QIODevice::ReadWrite);
+                            QDataStream stream(&array, QDataStream::ReadWrite);
                             stream << temp;
                             temp = array;
-                            //w.convert(qMetaTypeId<QByteArray>());
+                            //w.variantConvert(qMetaTypeId<QByteArray>());
                         }
                         query.bindValue(QString(":parent_") + i.field_name, temp);
                     }
@@ -1479,14 +1542,14 @@ namespace orm
                     if (i.is_primary_key) {
                         QVariant temp = Impl::read(parent->orig_meta_type_id, i.property_index, parentVal);
                         if (Impl::isPrimitiveString(i.orig_meta_type_id)) {
-                            temp.convert(qMetaTypeId<QString>());
+                            variantConvert(temp, qMetaTypeId<QString>());
                         }
                         if (Impl::isPrimitiveRaw(i.orig_meta_type_id)) {
                             QByteArray array;
-                            QDataStream stream(&array, QIODevice::ReadWrite);
+                            QDataStream stream(&array, QDataStream::ReadWrite);
                             stream << temp;
                             temp = array;
-                            //w.convert(qMetaTypeId<QByteArray>());
+                            //w.variantConvert(qMetaTypeId<QByteArray>());
                         }
                         query.bindValue(QString(":parent_") + i.field_name, temp);
                     }
@@ -1499,14 +1562,14 @@ namespace orm
             }
             QVariant temp = Impl::read(entry.orig_meta_type_id, i.property_index, value);
             if (Impl::isPrimitiveString(i.orig_meta_type_id)) {
-                temp.convert(qMetaTypeId<QString>());
+                variantConvert(temp, qMetaTypeId<QString>());
             }
             if (Impl::isPrimitiveRaw(i.orig_meta_type_id)) {
                 QByteArray array;
-                QDataStream stream(&array, QIODevice::ReadWrite);
+                QDataStream stream(&array, QDataStream::ReadWrite);
                 stream << temp;
                 temp = array;
-                //w.convert(qMetaTypeId<QByteArray>());
+                //w.variantConvert(qMetaTypeId<QByteArray>());
             }
             query.bindValue(QString(":") + i.field_name, temp);
         }
@@ -1557,13 +1620,21 @@ namespace orm
 
 
 
+#if (QT_VERSION_MAJOR < 6)
 uint qHash(const orm::Containers::ORM_QVariantPair &variantPair) Q_DECL_NOEXCEPT
 {
     return qHash(variantPair.key.data());
 }
+#else
+size_t qHash(const orm::Containers::ORM_QVariantPair &variantPair) Q_DECL_NOEXCEPT
+{
+    return qHash(variantPair.key.data());
+}
+#endif
 
 QDebug operator<<(QDebug dbg, const orm::Config &)
 {
+
     QDebugStateSaver s(dbg);
     dbg.nospace().noquote() << "ORM Config:\n";
     dbg.nospace().noquote() << "General:\n";
@@ -1573,40 +1644,40 @@ QDebug operator<<(QDebug dbg, const orm::Config &)
 
     dbg.nospace().noquote() << "Pair types:\n";
     for (auto i : orm::Impl::pairTypes) {
-        dbg.nospace().noquote() << "  " << QMetaType::typeName(i) << " (" << i << "), \n";
+        dbg.nospace().noquote() << "  " << metaTypeName(i) << " (" << i << "), \n";
     }
     dbg << "Associative container types:\n" ;
     for (auto i = orm::Impl::assContTypeMap.begin(); i != orm::Impl::assContTypeMap.end(); ++i) {
-        dbg.nospace().noquote() << "  " << QMetaType::typeName(i.key()) << " (" << i.key() << ") -> <" <<
-                                   QMetaType::typeName(i.value().first) << " (" << i.value().first << "), " <<
-                                   QMetaType::typeName(i.value().second) << " (" << i.value().second << ")>\n";
+        dbg.nospace().noquote() << "  " << metaTypeName(i.key()) << " (" << i.key() << ") -> <" <<
+                                   metaTypeName(i.value().first) << " (" << i.value().first << "), " <<
+                                   metaTypeName(i.value().second) << " (" << i.value().second << ")>\n";
     }
     //    static QMap<int, orm::pointers::ORMPointerStub> pointerMap;
     dbg.nospace().noquote() << "Registred pointers:\n";
     for (auto i = orm::Impl::pointerMap.begin(); i != orm::Impl::pointerMap.end(); ++i) {
-        dbg.nospace().noquote() << "  " << QMetaType::typeName(i.key()) << " (" << i.key() << ") : "
-                                                                                              "Raw[" << i.value().pT << "], "
-                                                                                                                        "QShared[" << i.value().ST << "], "
-                                                                                                                                                      "QWeak[" << i.value().WT << "], "
-                                                                                                                                                                                  "std::shared[" << i.value().sT << "], "
-                                                                                                                                                                                                                    "std::weak[" << i.value().wT << "]\n";
+        dbg.nospace().noquote() << "  " << metaTypeName(i.key()) << " (" << i.key() << ") : "
+            "Raw"          "[" << i.value().pT << "], "
+            "QShared"      "[" << i.value().ST << "], "
+            "QWeak"        "[" << i.value().WT << "], "
+            "std::shared"  "[" << i.value().sT << "], "
+            "std::weak"    "[" << i.value().wT << "]\n";
     }
 
     dbg.nospace().noquote() << "Ignored types:\n";
     for (auto i : orm::Impl::ignoredTypes) {
-        dbg.nospace().noquote() << "  " << QMetaType::typeName(i) << " (" << i << "), \n";
+        dbg.nospace().noquote() << "  " << metaTypeName(i) << " (" << i << "), \n";
     }
     dbg.nospace().noquote() << "Primitive types (auto):\n";
     for (auto i : orm::Impl::primitiveContainers) {
-        dbg.nospace().noquote() << "  " << QMetaType::typeName(i) << " (" << i << "), \n";
+        dbg.nospace().noquote() << "  " << metaTypeName(i) << " (" << i << "), \n";
     }
     dbg.nospace().noquote() << "Primitive types (as string):\n";
     for (auto i : orm::Impl::primitiveStringContainers) {
-        dbg.nospace().noquote() << "  " << QMetaType::typeName(i) << " (" << i << "), \n";
+        dbg.nospace().noquote() << "  " << metaTypeName(i) << " (" << i << "), \n";
     }
     dbg.nospace().noquote() << "Primitive types (as blob):\n";
     for (auto i : orm::Impl::primitiveRawContainers) {
-        dbg.nospace().noquote() << "  " << QMetaType::typeName(i) << " (" << i << "), \n";
+        dbg.nospace().noquote() << "  " << metaTypeName(i) << " (" << i << "), \n";
     }
     return dbg;
 

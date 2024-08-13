@@ -9,13 +9,19 @@
 
 #include <list>
 #include <vector>
+#include <memory>
+
+#include <QSequentialIterable>
 #include <QList>
 #include <QVector>
+
+#include <QAssociativeIterable>
+#include <QMap>
+
 #include <QMetaObject>
 #include <QMetaProperty>
 #include <QVariant>
 #include <QPointer>
-#include <memory>
 
 
 
@@ -153,11 +159,11 @@ namespace orm
 
         public:
             template<class T>
-            static void create           (ORM * orm, typename std::enable_if<!std::is_base_of<QObject,T>::value, Type>::type = Type::Type) {
+            static void create           (ORM * orm, typename std::enable_if<!std::is_base_of<QObject,T>::value, Type  >::type = Type::Type    ) {
                 orm->id_create(qMetaTypeId<T>());
             }
             template<class T>
-            static void create           (ORM * orm, typename std::enable_if<std::is_base_of<QObject,T>::value, Object>::type = Object::Object) {
+            static void create           (ORM * orm, typename std::enable_if< std::is_base_of<QObject,T>::value, Object>::type = Object::Object) {
                 orm->id_create(qMetaTypeId<T*>());
             }
 
@@ -457,7 +463,11 @@ namespace orm
             template <typename T> VoidPointer toVoidPointer (                T *       t){ return VoidPointer( reinterpret_cast<void*>(                t        ) ); }
             template <typename T> VoidPointer toVoidPointerP(      QPointer <T>        t){ return VoidPointer( reinterpret_cast<void*>(                t.data() ) ); }
             template <typename T> VoidPointer toVoidPointerS(QSharedPointer <T> const& t){ return VoidPointer( reinterpret_cast<void*>(const_cast<T*>( t.data())) ); }
+#if (QT_VERSION_MAJOR < 6)
             template <typename T> VoidPointer toVoidPointerW(  QWeakPointer <T> const& t){ return VoidPointer( reinterpret_cast<void*>(const_cast<T*>( t.data())) ); }
+#else
+            template <typename T> VoidPointer toVoidPointerW(  QWeakPointer <T> const& t){ return VoidPointer( reinterpret_cast<void*>(const_cast<T*>( t.toStrongRef().data())) ); }
+#endif
             template <typename T> VoidPointer toVoidPointers(std::shared_ptr<T> const& t){ return VoidPointer( reinterpret_cast<void*>(const_cast<T*>( t.get ())) ); }
             template <typename T> VoidPointer toVoidPointerw(  std::weak_ptr<T> const& t){ return VoidPointer( reinterpret_cast<void*>(const_cast<T*>( t.lock().get())) ); }
 
@@ -881,7 +891,11 @@ namespace orm
             if (isAssociativeContainer(meta_type_id) || isPair(meta_type_id)) {
                 if (value.canConvert<orm::Containers::ORM_QVariantPair>()) {
                     QVariant var = value;
+#if (QT_VERSION_MAJOR < 6)
                     var.convert(qMetaTypeId<orm::Containers::ORM_QVariantPair>());
+#else
+                    var.convert(QMetaType::fromType<orm::Containers::ORM_QVariantPair>());
+#endif
                     foo(meta_type_id, var, 0);
                     return;
                 }
@@ -922,8 +936,11 @@ QDebug operator<< (QDebug dbg, orm::Config const& config);
 QDebug operator<< (QDebug dbg, orm::Containers::ORM_QVariantPair const& pair);
 QDebug operator<< (QDebug dbg, QList<orm::Containers::ORM_QVariantPair> const& pair);
 
-
+#if (QT_VERSION_MAJOR < 6)
 uint qHash(orm::Containers::ORM_QVariantPair const& variantPair) Q_DECL_NOEXCEPT;
+#else
+size_t qHash(orm::Containers::ORM_QVariantPair const& variantPair) Q_DECL_NOEXCEPT;
+#endif
 Q_DECLARE_METATYPE(orm::Containers::ORM_QVariantPair)
 Q_DECLARE_METATYPE(orm::Pointers::NewStub)
 Q_DECLARE_METATYPE(orm::Pointers::VoidPointer)

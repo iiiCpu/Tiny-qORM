@@ -5,6 +5,13 @@
 #ifndef ORM_DEF_H
 #define ORM_DEF_H
 
+
+#if defined(ORM_LIBRARY)
+#  define ORM_SHARED_EXPORT Q_DECL_EXPORT
+#else
+#  define ORM_SHARED_EXPORT Q_DECL_IMPORT
+#endif
+
 #include <QMetaType>
 
 
@@ -66,6 +73,72 @@
 #define ORM_CLASSINFO_TABLE_NAME(param)              Q_CLASSINFO(orm_classInfo_tableName        , #param)
 #define ORM_CLASSINFO_TABLE_NAME_NO_PARENT           Q_CLASSINFO(orm_classInfo_tableNameNoParent, "true")
 #define ORM_CLASSINFO_FIELD_NAME(property, field)    Q_CLASSINFO(orm_classInfo_fieldName        , #property "=" #field)
+
+namespace orm
+{
+    template <typename T>
+    static typename std::enable_if< std::is_base_of<QObject,T>::value, QVariant>::type _data(QSharedPointer<T> const& t, int p)
+    {
+        return t->metaObject()->property(p).read(t.data());
+    }
+    template <typename T>
+    static typename std::enable_if< std::is_base_of<QObject,T>::value, QVariant>::type _data(T * t, int p)
+    {
+        return t->metaObject()->property(p).read(t);
+    }
+    template <typename T>
+    static typename std::enable_if< std::is_base_of<QObject,T>::value, QVariant>::type _data(T & t, int p)
+    {
+        return t.metaObject()->property(p).read(&t);
+    }
+    template <typename T>
+    static typename std::enable_if<!std::is_base_of<QObject,T>::value, QVariant>::type _data(T & t, int p)
+    {
+        return t.metaObject()->property(p).readOnGadget(&t);
+    }
+
+    template <typename T>
+    static typename std::enable_if< std::is_base_of<QObject,T>::value, bool>::type _setdata(QSharedPointer<T> & t, int p, QVariant const& v)
+    {
+        return t->metaObject()->property(p).write(t.data(), v);
+    }
+    template <typename T>
+    static typename std::enable_if< std::is_base_of<QObject,T>::value, bool>::type _serdata(T * t, int p, QVariant const& v)
+    {
+        return t->metaObject()->property(p).write(t, v);
+    }
+    template <typename T>
+    static typename std::enable_if< std::is_base_of<QObject,T>::value, bool>::type _setdata(T & t, int p, QVariant const& v)
+    {
+        return t.metaObject()->property(p).write(&t, v);
+    }
+    template <typename T>
+    static typename std::enable_if<!std::is_base_of<QObject,T>::value, bool>::type _setdata(T & t, int p, QVariant const& v)
+    {
+        return t.metaObject()->property(p).writeOnGadget(&t, v);
+    }
+
+    template <typename T>
+    static typename std::enable_if< std::is_base_of<QObject,T>::value, bool>::type _setdata(QSharedPointer<T> const& t, int p, QVariant && v)
+    {
+        return t->metaObject()->property(p).write(t.data(), v);
+    }
+    template <typename T>
+    static typename std::enable_if< std::is_base_of<QObject,T>::value, bool>::type _serdata(T * t, int p, QVariant && v)
+    {
+        return t->metaObject()->property(p).write(t, v);
+    }
+    template <typename T>
+    static typename std::enable_if< std::is_base_of<QObject,T>::value, bool>::type _setdata(T & t, int p, QVariant && v)
+    {
+        return t.metaObject()->property(p).write(&t, v);
+    }
+    template <typename T>
+    static typename std::enable_if<!std::is_base_of<QObject,T>::value, bool>::type _setdata(T & t, int p, QVariant && v)
+    {
+        return t.metaObject()->property(p).writeOnGadget(&t, v);
+    }
+}
 
 
 struct ORMValue
